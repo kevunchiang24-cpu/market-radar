@@ -1,0 +1,15 @@
+# 本機 AI 工具設定（只在這台電腦用，不需要上傳）
+.claude/
+.agents/
+skills-lock.json
+
+# 個人投資規則：專案是公開的，預設不上傳。要上傳就刪掉這一行
+CLAUDE.md
+
+# Python 暫存
+__pycache__/
+*.pyc
+
+# 金鑰、環境變數檔（以防萬一）
+.env
+*.env

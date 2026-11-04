@@ -1,0 +1,91 @@
+name: 每日更新市場資料
+
+on:
+  schedule:
+    # GitHub 用 UTC 時間
+    - cron: "10 14 * * 1-5"   # 台股：台灣時間 週一到週五 22:10（法人、融資資料都公布後）
+    - cron: "30 22 * * 1-5"   # 美股：台灣時間 隔天早上 06:30（美股收盤後）
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "要更新哪個市場"
+        required: true
+        default: "both"
+        type: choice
+        options: [both, tw, us]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      # 選填：設定後燈號變化會發 Telegram 通知（GitHub → Settings → Secrets and variables → Actions）
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # 選填：FinMind 免費金鑰。有設定才會回補上櫃個股的法人歷史；大盤法人歷史不需要金鑰
+      FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安裝套件
+        run: pip install -r requirements.txt
+
+      - name: 判斷要跑哪個市場
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "market=${{ inputs.market }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "10 14 * * 1-5" ]; then
+            echo "market=tw" >> "$GITHUB_OUTPUT"
+          else
+            echo "market=us" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 更新台股
+        if: steps.pick.outputs.market == 'tw' || steps.pick.outputs.market == 'both'
+        run: python scripts/update.py --market tw
+
+      - name: 更新美股
+        if: steps.pick.outputs.market == 'us' || steps.pick.outputs.market == 'both'
+        run: python scripts/update.py --market us
+
+      # 總經和核心配置回測：失敗不影響台股、美股資料
+      - name: 更新總經指標
+        continue-on-error: true
+        run: python scripts/update.py --market macro
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 更新核心配置回測（價格快取 20 天重抓一次）
+        continue-on-error: true
+        run: node scripts/core_backtest.js
+
+      - name: 存回 GitHub
+        run: |
+          git config user.name "market-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "資料沒有變化"
+            exit 0
+          fi
+          git commit -m "更新市場資料 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep 10
+          done
+          exit 1
