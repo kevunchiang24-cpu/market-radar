@@ -260,7 +260,7 @@ def update_fundamentals(market, tickers, today):
     todo = stale[:cap]
     log(f"基本面：快取 {len(cache)} 檔，這次更新 {len(todo)} 檔")
     fails, done = 0, 0
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=2) as ex:
         for i in range(0, len(todo), 40):
             batch = todo[i:i + 40]
             got = list(ex.map(_fetch_info, batch))
@@ -273,10 +273,10 @@ def update_fundamentals(market, tickers, today):
                 else:
                     bad += 1
             fails = fails + bad if bad == len(batch) else 0
-            if fails >= 120:
-                log("  基本面連續失敗太多（可能被限流），這次先停止，下次再補")
+            if fails >= 80:
+                log("  基本面連續失敗太多（可能被 Yahoo 限流），這次先停止，下次更新會從沒抓到的開始補")
                 break
-            time.sleep(1.0)
+            time.sleep(2.5 if bad else 1.5)
     log(f"  基本面更新完成 {done} 檔")
     keep = set(tickers)
     cache = {k: v for k, v in cache.items() if k in keep}
@@ -1811,18 +1811,31 @@ CYCLE = ["擴張初期", "擴張後期", "緊縮", "衰退"]
 
 
 def fred_series(sid, start):
+    """FRED 資料。有 FRED_API_KEY（免費金鑰）就走官方 API；沒有就用公開 CSV。
+    公開 CSV 在 GitHub Actions 的雲端伺服器上常常連不上，所以等待時間設短，失敗就交給備援來源"""
+    key = os.environ.get("FRED_API_KEY")
+    if key:
+        r = requests.get("https://api.stlouisfed.org/fred/series/observations",
+                         params={"series_id": sid, "api_key": key, "file_type": "json", "observation_start": start},
+                         headers={"User-Agent": "market-radar/1.0"}, timeout=30)
+        if r.status_code == 200:
+            obs = r.json().get("observations") or []
+            s_ = pd.Series({pd.Timestamp(o["date"]): to_num(o.get("value")) for o in obs}, dtype=float).dropna()
+            if len(s_):
+                return s_.sort_index()
+        log(f"  FRED API {sid}：HTTP {r.status_code}，改用公開 CSV")
     # FRED 會擋偽裝成瀏覽器的 User-Agent（會一直不回應），所以用一般程式名稱
     url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd={start}"
     last = None
-    for i in range(3):
+    for i in range(2):
         try:
-            r = requests.get(url, headers={"User-Agent": "market-radar/1.0"}, timeout=30)
+            r = requests.get(url, headers={"User-Agent": "market-radar/1.0"}, timeout=12)
             if r.status_code == 200:
                 break
             last = f"HTTP {r.status_code}"
         except Exception as e:  # noqa
             last = str(e)
-        time.sleep(3 * (i + 1))
+        time.sleep(2)
     else:
         raise RuntimeError(f"FRED {sid} 失敗：{last}")
     df = pd.read_csv(io.StringIO(r.text))
@@ -1830,6 +1843,28 @@ def fred_series(sid, start):
     df["d"] = pd.to_datetime(df["d"])
     df["v"] = pd.to_numeric(df["v"], errors="coerce")
     return df.dropna().set_index("d")["v"]
+
+
+def treasury_curve(start_year):
+    """美國財政部每日殖利率（官網 CSV，不需金鑰）。回傳 (名目 DataFrame, 實質 DataFrame)，欄位是年期"""
+    out = {}
+    for kind in ("daily_treasury_yield_curve", "daily_treasury_real_yield_curve"):
+        frames = []
+        for y in range(start_year, datetime.now(TPE).year + 1):
+            url = (f"https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/"
+                   f"{y}/all?type={kind}&field_tdr_date_value={y}&page&_format=csv")
+            try:
+                r = requests.get(url, headers={"User-Agent": "market-radar/1.0"}, timeout=30)
+                if r.status_code == 200 and r.text.startswith("Date"):
+                    frames.append(pd.read_csv(io.StringIO(r.text)))
+            except Exception as e:  # noqa
+                log("  財政部殖利率失敗：", kind, y, e)
+            time.sleep(0.5)
+        if frames:
+            df = pd.concat(frames)
+            df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y")
+            out[kind] = df.set_index("Date").sort_index().apply(pd.to_numeric, errors="coerce")
+    return out.get("daily_treasury_yield_curve"), out.get("daily_treasury_real_yield_curve")
 
 
 def weekly_payload(s, name, unit, weeks=156):
@@ -1888,36 +1923,62 @@ def run_macro():
     now = datetime.now(TPE)
     start = (now - timedelta(days=365 * 4)).strftime("%Y-%m-%d")
     raw, series = {}, {}
+    src = {}
     for key, sid, name, unit in FRED:
         try:
             raw[key] = fred_series(sid, start)
             series[key] = weekly_payload(raw[key], name, unit)
+            src[key] = "FRED"
         except Exception as e:  # noqa
             log("FRED 失敗：", sid, e)
         time.sleep(1)
+    # FRED 連不上時：殖利率曲線、實質利率、預期通膨改用美國財政部資料（數值跟 FRED 同一來源）
+    if any(k not in raw for k in ("curve", "real", "infl")):
+        nom, real = treasury_curve(int(start[:4]))
+        if nom is not None and "curve" not in raw and {"10 Yr", "2 Yr"} <= set(nom.columns):
+            raw["curve"] = (nom["10 Yr"] - nom["2 Yr"]).dropna()
+            series["curve"] = weekly_payload(raw["curve"], "10Y−2Y 殖利率差", "%"); src["curve"] = "美國財政部"
+        if real is not None and "real" not in raw and "10 YR" in real.columns:
+            raw["real"] = real["10 YR"].dropna()
+            series["real"] = weekly_payload(raw["real"], "10年期實質利率", "%"); src["real"] = "美國財政部"
+        if nom is not None and real is not None and "infl" not in raw and "10 YR" in real.columns:
+            raw["infl"] = (nom["10 Yr"] - real["10 YR"]).dropna()
+            series["infl"] = weekly_payload(raw["infl"], "10年期預期通膨", "%"); src["infl"] = "美國財政部（名目減實質）"
+        log("財政部備援：", ", ".join(f"{k}={v}" for k, v in src.items()))
     px = yf_download(["GLD", "^TWII", "^GSPC", "XLK", "XLY", "XLI", "XLF", "XLB", "XLE", "XLP", "XLU", "XLV"],
                      "5y", "1d", chunk=20, pause=1)
     close = px.get("Close", pd.DataFrame())
+    if "usd" not in raw:   # 美元：FRED 的廣義美元指數連不上就用 Yahoo 的 DXY（不同指數，但方向一致）
+        try:
+            dx = yf_download(["DX-Y.NYB"], "5y", "1d", chunk=1, pause=0).get("Close", pd.DataFrame())
+            if "DX-Y.NYB" in dx:
+                raw["usd"] = dx["DX-Y.NYB"].dropna()
+                series["usd"] = weekly_payload(raw["usd"], "美元指數（DXY）", ""); src["usd"] = "Yahoo"
+        except Exception as e:  # noqa
+            log("美元指數備援失敗：", e)
     if "GLD" in close:
         series["gold"] = weekly_payload(close["GLD"].dropna(), "黃金（GLD）", "")
 
     # 債務週期：信用利差急升→衰退；殖利率曲線倒掛→緊縮；剛解除倒掛或曲線很平→擴張後期；其他→擴張初期
     why, stage = [], None
     c, h = raw.get("curve"), raw.get("hy")
-    if c is not None and h is not None and len(c) > 300 and len(h) > 70:
-        cl, hl = float(c.iloc[-1]), float(h.iloc[-1])
-        h3 = float(hl - h.iloc[-64])  # 約 3 個月前
+    if h is None or len(h) <= 70:
+        h = None
+    if c is not None and len(c) > 300:
+        cl = float(c.iloc[-1])
+        hl = float(h.iloc[-1]) if h is not None else 0.0
+        h3 = float(hl - h.iloc[-64]) if h is not None else None  # 約 3 個月前
         inv24 = bool((c.iloc[-504:] < 0).any())
         inv6 = bool((c.iloc[-126:] < 0).any())
         why.append(f"10Y−2Y 殖利率差 {cl:+.2f}%{'（倒掛中）' if cl < 0 else ''}")
-        why.append(f"高收益債利差 {hl:.2f}%，3個月變化 {h3:+.2f}%")
-        if hl >= 6 or h3 >= 1.5:
+        why.append(f"高收益債利差 {hl:.2f}%，3個月變化 {h3:+.2f}%" if h is not None else "高收益債利差：沒有資料（FRED 連不上），這次只用殖利率曲線判斷")
+        if h is not None and (hl >= 6 or h3 >= 1.5):
             stage = 3
             why.append("信用利差偏高或急升，代表企業借錢變難，景氣有衰退壓力")
         elif cl < 0:
             stage = 2
             why.append("殖利率曲線倒掛，央行緊縮的後段")
-        elif inv24 or cl < 0.5 or hl >= 4.5:
+        elif inv24 or cl < 0.5 or (h is not None and hl >= 4.5):
             stage = 1
             why.append("近兩年內曾倒掛、剛轉正，或曲線仍偏平" if inv24 else "曲線偏平或利差不低")
         else:
@@ -1969,7 +2030,7 @@ def run_macro():
     below = [i["n"] for i in idx if i["below"]]
     tactical = tactical_signal(macro_hit, risk, r20, idx)
 
-    out = {"updated": now.strftime("%Y-%m-%d %H:%M"), "series": series,
+    out = {"updated": now.strftime("%Y-%m-%d %H:%M"), "series": series, "src": src,
            "stage": {"idx": stage, "name": CYCLE[stage] if stage is not None else None, "why": why},
            "risk": {"label": risk, "r20": rnd(r20, 4), "r60": rnd(r60, 4)},
            "tactical": tactical, "idx": idx}

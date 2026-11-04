@@ -31,6 +31,8 @@ jobs:
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       # 選填：FinMind 免費金鑰。有設定才會回補上櫃個股的法人歷史；大盤法人歷史不需要金鑰
       FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+      # 選填：FRED 免費 API 金鑰。GitHub 的伺服器常連不上 FRED 公開網址，有金鑰就改走官方 API（信用利差只有 FRED 有）
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
