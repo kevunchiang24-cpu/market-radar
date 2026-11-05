@@ -404,13 +404,15 @@ def industry_table(items):
     return {"quarters": quarters, "rows": out}
 
 
-def sector_weekly(close_df, tick_sec, weights, weeks=12):
-    """族群相對大盤的每週報酬（成交額加權），最近 weeks 週；另算近 4 週相對強弱 rs4"""
+def sector_weekly(close_df, tick_sec, weights, weeks=12, vol_df=None):
+    """族群相對大盤的每週報酬（成交額加權），最近 weeks 週；另算近 4 週相對強弱 rs4。
+    有成交量時另算輪動軌跡 trail：每週一個點 [近 4 週相對強弱, 成交比重減前 4 週平均, 當週成交比重]"""
     cols = [t for t in tick_sec if t in close_df.columns]
     if not cols:
         return [], {}
     wk = close_df[cols].resample("W-FRI").last()
-    ret = wk.pct_change(fill_method=None).iloc[-weeks:]
+    ret_all = wk.pct_change(fill_method=None)
+    ret = ret_all.iloc[-weeks:]
     w = pd.Series({t: max(weights.get(t) or 0, 0) for t in cols})
     secs = pd.Series({t: tick_sec[t] for t in cols})
 
@@ -419,6 +421,14 @@ def sector_weekly(close_df, tick_sec, weights, weeks=12):
         den = (r.notna() * ww).sum(axis=1)
         return num_ / den.replace(0, np.nan)
     mkt = wavg(ret, w)
+    mkt_all = wavg(ret_all, w)
+    # 每週成交額（收盤價×成交量加總）→ 族群成交比重
+    tvw = None
+    if vol_df is not None:
+        vc = [t for t in cols if t in vol_df.columns]
+        if vc:
+            tvw = (close_df[vc] * vol_df[vc]).resample("W-FRI").sum(min_count=1)
+            tvw = tvw.reindex(wk.index)
     out = {}
     for sname in secs.unique():
         cs = secs[secs == sname].index
@@ -429,8 +439,93 @@ def sector_weekly(close_df, tick_sec, weights, weeks=12):
         last4 = sr.iloc[-4:]
         rs4 = float((1 + last4).prod() - (1 + mkt.iloc[-4:]).prod()) if last4.notna().all() else None
         out[sname] = {"wk": [rnd(v, 4) for v in rel.values], "rs4": rnd(rs4, 4)}
+        if tvw is not None:
+            csv_ = [t for t in cs if t in tvw.columns]
+            tot = tvw.sum(axis=1).replace(0, np.nan)
+            sh = tvw[csv_].sum(axis=1) / tot if csv_ else None
+            sr_all = wavg(ret_all[cs], w[cs])
+            # 近 4 週相對強弱（滾動）
+            rs_roll = (1 + sr_all).rolling(4).apply(np.prod, raw=True) - (1 + mkt_all).rolling(4).apply(np.prod, raw=True)
+            trail = []
+            for i in range(len(wk) - weeks, len(wk)):
+                if sh is None or i < 4:
+                    trail.append(None)
+                    continue
+                x, s_now = rs_roll.iloc[i], sh.iloc[i]
+                prev = sh.iloc[i - 4:i]
+                y = s_now - prev.mean() if prev.notna().all() else np.nan
+                trail.append([rnd(x, 4), rnd(y, 5), rnd(s_now, 4)] if pd.notna(x) and pd.notna(y) and pd.notna(s_now) else None)
+            out[sname]["trail"] = trail
     labels = [d.strftime("%m/%d") for d in ret.index]
     return labels, out
+
+
+FLOW_DAYS = 20      # 資金流向：保留最近 20 個交易日
+FLOW_SPIKE = 5.0    # 單日成交額超過前 20 日平均的 5 倍 → 標「異常量」（可能是鉅額交易、指數調整）
+
+
+def stock_flow(dc, dh, dl, dv, insti=None, code=None):
+    """個股近 FLOW_DAYS 個交易日的每日：成交額 t、價量估算買賣力道 e、三大法人買賣超金額 i（只有台股）。
+    e＝((收−低)−(高−收))÷(高−低) × 成交額，是用收盤在當日高低區間的位置估算主動買賣，只是估算。
+    i＝當日三大法人買賣超股數 × 當日收盤價。回傳 (每日 dict, 摘要 dict)"""
+    df = pd.DataFrame({"c": dc, "h": dh, "l": dl, "v": dv}).dropna()
+    df = df[df["v"] > 0]
+    if len(df) < 2:
+        return None, {}
+    tv_all = df["c"] * df["v"]
+    df = df.iloc[-FLOW_DAYS:]
+    tv = tv_all.iloc[-FLOW_DAYS:]
+    rng = (df["h"] - df["l"]).replace(0, np.nan)
+    clv = (((df["c"] - df["l"]) - (df["h"] - df["c"])) / rng).fillna(0)
+    est = clv * tv
+    ins = None
+    if insti is not None and code is not None:
+        vals = []
+        for d_, c_ in zip(df.index, df["c"]):
+            row = insti.get(d_.strftime("%Y%m%d"), {}).get(code)
+            vals.append(sum(v or 0 for v in row) * c_ if row else np.nan)
+        ins = pd.Series(vals, index=df.index)
+    daily = {"t": tv, "e": est, "i": ins}
+    agg = lambda x, n: rnd(float(x.iloc[-n:].sum()), 0) if x is not None and x.iloc[-n:].notna().any() else None  # noqa: E731
+    summ = {"t": [agg(tv, 1), agg(tv, 5), agg(tv, 20)], "e": [agg(est, 1), agg(est, 5), agg(est, 20)]}
+    if ins is not None:
+        summ["i"] = [agg(ins, 1), agg(ins, 5), agg(ins, 20)]
+    # 異常量：近 5 日內有哪一天的成交額 > 前 20 日平均 × FLOW_SPIKE
+    base = tv_all.shift(1).rolling(20).mean()
+    spk = (tv_all > base * FLOW_SPIKE).iloc[-5:]
+    if spk.any():
+        summ["spk"] = spk[spk].index[-1].strftime("%m/%d")
+    return daily, summ
+
+
+class FlowAgg:
+    """把個股每日資金流加總成產業每日（給產業 × 日期熱力圖）"""
+    def __init__(self):
+        self.parts = {}
+
+    def add(self, sec, daily):
+        if daily is not None and sec:
+            self.parts.setdefault(sec, []).append(daily)
+
+    def result(self):
+        idx = None
+        for lst in self.parts.values():
+            for dd in lst:
+                ix = dd["t"].index
+                idx = ix if idx is None or len(ix) > len(idx) or ix[-1] > idx[-1] else idx
+        if idx is None:
+            return None
+        idx = idx[-FLOW_DAYS:]
+        out = {}
+        for sec, lst in self.parts.items():
+            o = {}
+            for k in ("t", "e", "i"):
+                ss = [dd[k].reindex(idx) for dd in lst if dd.get(k) is not None]
+                if ss:
+                    tot = pd.concat(ss, axis=1).sum(axis=1, min_count=1)
+                    o[k] = [rnd(float(v), 0) if pd.notna(v) else None for v in tot.values]
+            out[sec] = o
+        return {"d": [d.strftime("%m/%d") for d in idx], "sec": out}
 
 
 def sector_medians(items, key):
@@ -1380,6 +1475,7 @@ def run_tw(limit=None):
     bt = BTAgg()
     rows, metrics, series = [], [], {}
     ind_items, tick_sec, tick_w, sec_i5 = [], {}, {}, {}
+    flow_agg = FlowAgg()
     px_stat = {}
     for u in uni:
         t = yt[u["c"]]
@@ -1464,6 +1560,13 @@ def run_tw(limit=None):
         extra = {"mk": u["m"], "fs": fs, "ts": ts, "pe": rnd(p, 1), "dy": rnd(dy, 2), "pb": rnd(pb, 2),
                  "liq": liq, "q": rnd(q, 1), "val": rnd(val, 1), "lt": rnd(lt, 1), "l": light,
                  "ryoy": rnd(ryoy, 3), "rcum": rnd(rcum, 3), "rym": ym, "i5": rnd(i5, 0), **ff}
+        if not is_etf:
+            fdaily, fsum = stock_flow(dc, get_col(dly, "High", t), get_col(dly, "Low", t), dv, insti, u["c"])
+            flow_agg.add(u["sec"], fdaily)
+            extra["fl"] = fsum
+            mc_ = (fund.get(t) or {}).get("mcap")
+            if mc_:
+                extra["mcap"] = rnd(mc_, 0)
         if ex:
             extra["exd"] = ex[0]
         if pxflag:
@@ -1482,7 +1585,7 @@ def run_tw(limit=None):
 
     # 族群資金比重 → 把族群分數補進個股資金面
     secs = sector_table(metrics)
-    weeks, swk = sector_weekly(dly["Close"], tick_sec, tick_w)
+    weeks, swk = sector_weekly(dly["Close"], tick_sec, tick_w, vol_df=dly.get("Volume"))
     qfb = qfii_by_sector(qf)
     for s_ in secs:
         s_.update(swk.get(s_["name"], {}))
@@ -1558,6 +1661,7 @@ def run_tw(limit=None):
         },
         "valuation": valn, "backtest": bt.result(), "liq_min": LIQ_MIN["tw"],
         "weeks": weeks, "industry": industry,
+        "flow": flow_agg.result(),
         "holidays": sorted(f"{k[:4]}-{k[4:6]}-{k[6:]}" for k in hol if k[:4] >= today.strftime("%Y")),
         "px_check": {"filled": px_stat.get("filled", 0), "mismatch": px_stat.get("mismatch", 0), "ok": px_stat.get("ok", 0)},
         "sectors": secs, "benchmarks": benches, "signals": signals, "stocks": rows,
@@ -1675,6 +1779,7 @@ def run_us(limit=None):
     bt = BTAgg()
     rows, metrics, series = [], [], {}
     ind_items, tick_sec, tick_w = [], {}, {}
+    flow_agg = FlowAgg()
     for u in uni:
         t = u["c"]
         is_etf = bool(u.get("etf"))
@@ -1715,6 +1820,13 @@ def run_us(limit=None):
                  "pe": rnd((fd or {}).get("pe"), 1), "pb": rnd((fd or {}).get("pb"), 2), **ff}
         if is_etf:
             extra["etf"] = True
+        else:
+            fdaily, fsum = stock_flow(dc, get_col(dly, "High", t), get_col(dly, "Low", t), dv)
+            flow_agg.add(u["sec"], fdaily)
+            extra["fl"] = fsum
+            mc_ = (fund.get(t) or {}).get("mcap")
+            if mc_:
+                extra["mcap"] = rnd(mc_, 0)
         if m["chk"]:
             extra["chk"] = True
         rows.append(stock_row(t, u["n"], u["sec"], m, flow_parts, tags, extra))
@@ -1726,7 +1838,7 @@ def run_us(limit=None):
         raise RuntimeError(f"美股只算出 {len(rows)} 檔，資料可能沒抓完整，這次不更新網站資料")
 
     secs = sector_table(metrics)
-    weeks, swk = sector_weekly(dly["Close"], tick_sec, tick_w)
+    weeks, swk = sector_weekly(dly["Close"], tick_sec, tick_w, vol_df=dly.get("Volume"))
     for s_ in secs:
         s_.update(swk.get(s_["name"], {}))
     industry = industry_table(ind_items)
@@ -1796,6 +1908,7 @@ def run_us(limit=None):
         "scanned": len(rows), "overview": ov, "etfs": etfs,
         "valuation": valn, "backtest": bt.result(), "liq_min": LIQ_MIN["us"],
         "weeks": weeks, "industry": industry,
+        "flow": flow_agg.result(),
         "sectors": secs, "benchmarks": benches, "stocks": rows,
     }
     finish("us", out, series)

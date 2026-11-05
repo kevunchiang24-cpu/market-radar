@@ -33,6 +33,8 @@ jobs:
       FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
       # 選填：FRED 免費 API 金鑰。GitHub 的伺服器常連不上 FRED 公開網址，有金鑰就改走官方 API（信用利差只有 FRED 有）
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      # 選填：Claude API 金鑰。有設定才會由 Claude 寫①總覽的 AI 總結；沒有就用規則組句（scripts/ai_summary.py）
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +77,11 @@ jobs:
       - name: 更新核心配置回測（價格快取 20 天重抓一次）
         continue-on-error: true
         run: node scripts/core_backtest.js
+
+      # AI 總結：失敗不影響其他資料（失敗時自動改用規則組句）
+      - name: AI 總結
+        continue-on-error: true
+        run: python scripts/ai_summary.py
 
       - name: 存回 GitHub
         run: |

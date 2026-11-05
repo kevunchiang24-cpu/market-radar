@@ -7,7 +7,7 @@
 <script>try{var t=JSON.parse(localStorage.getItem("mr_tweaks")||"{}"),r=document.documentElement;r.dataset.theme=t.theme||"dark";r.dataset.density=t.density||"comfortable";r.dataset.accent=t.accent||"violet";}catch(e){}</script>
 <title>市場雷達</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;500;700&family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
 <style>
 /* ═══ 市場雷達 v3 設計系統：Glass Terminal ═══
    外框（導覽、面板）＝ Raycast 式毛玻璃；資料（數字、表格）＝終端機紀律：等寬數字、髮絲線、語意色 */
@@ -157,6 +157,13 @@ a{color:var(--acc)}
 /* 產業熱點地圖 */
 .hv{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px}
 .hv-stage{position:relative;height:440px;border-radius:var(--r-tile);overflow:hidden;background:rgba(0,0,0,.22);border:1px solid var(--hair)}
+.ai-head{font-size:clamp(19px,2.2vw,24px);font-weight:700;line-height:1.45;margin:2px 0 14px;text-wrap:pretty}
+.ai-secs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 22px}
+.ai-secs p{margin:4px 0 0;font-size:var(--fs-sm);line-height:1.75;color:var(--t2);text-wrap:pretty}
+.ai-t{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;color:var(--t3)}.ai-t.up{color:var(--up)}.ai-t.dn{color:var(--dn)}
+.ai-two{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 22px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
+.ai-two ul{margin:4px 0 0;padding-left:18px;font-size:var(--fs-sm);line-height:1.7;color:var(--t2)}
+@media (max-width:900px){.ai-secs,.ai-two{grid-template-columns:minmax(0,1fr)}}
 .tile{position:absolute;padding:6px 8px;border-radius:4px;overflow:hidden;cursor:pointer;transition:background .5s var(--ease),box-shadow var(--t-fast)}
 .tile:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.6);z-index:2}
 .tile.sel{box-shadow:inset 0 0 0 2px var(--t1);z-index:3}
@@ -170,6 +177,67 @@ a{color:var(--acc)}
 .qsvg text{fill:var(--t1);font-size:11px;pointer-events:none}
 .qsvg .ql{fill:var(--t3);font-size:11px}
 .tip{position:absolute;pointer-events:none;display:none;z-index:9;min-width:170px;padding:8px 12px;border-radius:var(--r-tile);font-size:var(--fs-xs);background:rgba(16,18,28,.92);backdrop-filter:var(--blur);border:1px solid var(--hair2);box-shadow:var(--float)}
+/* ② 熱點：資金流向。深紫底（參考使用者提供的資訊圖表海報）、白字、漲跌色以 0 為中心、接近 0 用灰 */
+.fl-sheet{--fl-bg:#241848;--fl-ink:#FFFFFF;--fl-dim:rgba(255,255,255,.64);--fl-hair:rgba(255,255,255,.13);--fl-sel:#FCE38A;
+  background:var(--fl-bg);color:var(--fl-ink);border-radius:2px;margin:0 0 16px;padding:30px 30px 26px;font-family:"Noto Sans TC",sans-serif}
+.fl-sheet .up{color:var(--up)}.fl-sheet .dn{color:var(--dn)}.fl-dim,.fl-sheet .fl-dim{color:var(--fl-dim)}
+.fl-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;border-bottom:3px solid var(--fl-ink);padding-bottom:14px}
+.fl-kicker{font:600 13px/1.4 "Barlow Condensed","Noto Sans TC",sans-serif;letter-spacing:.12em;color:var(--fl-dim)}
+.fl-sheet .fl-title{font-size:44px;font-weight:900;line-height:1.05;margin:4px 0 0;letter-spacing:.06em;color:var(--fl-ink)}
+.fl-ctl{display:flex;gap:18px;flex-wrap:wrap}.fl-ctl label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--fl-dim);letter-spacing:.08em}
+.fl-seg{display:flex;border:1px solid var(--fl-hair)}
+.fl-seg button{font:500 13px "Noto Sans TC",sans-serif;color:var(--fl-dim);background:none;border:0;padding:6px 11px;cursor:pointer;min-height:32px}
+.fl-seg button+button{border-left:1px solid var(--fl-hair)}.fl-seg button:hover{color:var(--fl-ink)}
+.fl-seg button.on{background:var(--fl-ink);color:var(--fl-bg);font-weight:700}
+.fl-seg button:focus-visible,.fl-bar:focus-visible,.fl-hn:focus-visible,.fl-btn:focus-visible{outline:2px solid var(--fl-sel);outline-offset:1px}
+.fl-def{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 22px;margin:12px 0 22px;font-size:12px;line-height:1.6}
+.fl-def dt{font:600 11px "Barlow Condensed","Noto Sans TC",sans-serif;letter-spacing:.12em;color:var(--fl-sel)}.fl-def dd{margin:0;color:var(--fl-dim);text-wrap:pretty}
+.fl-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:26px 30px}
+.fl-card{min-width:0}.fl-heat{grid-column:1/-1}
+.fl-card h2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:17px;font-weight:900;letter-spacing:.06em;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--fl-hair);color:var(--fl-ink)}
+.fl-card h2 span{font-size:11px;font-weight:400;letter-spacing:.02em;color:var(--fl-dim)}
+.fl-card h3{font-size:13px;font-weight:700;margin:0 0 4px;color:var(--fl-ink)}
+.fl-bars{display:flex;flex-direction:column}
+.fl-bar{display:grid;grid-template-columns:96px minmax(0,1fr) minmax(0,1fr) 78px;align-items:center;min-height:23px;background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
+.fl-bar:hover{background:rgba(255,255,255,.05)}.fl-bar.sel .fl-bn{color:var(--fl-sel);font-weight:700}
+.fl-bn{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+.fl-bl,.fl-br{display:flex;align-items:center;height:23px}.fl-bl{justify-content:flex-end;border-right:1px solid rgba(255,255,255,.4)}
+.fl-bl i,.fl-br i{display:block;height:11px}.fl-bl i{border-radius:3px 0 0 3px;margin-right:1px}.fl-br i{border-radius:0 3px 3px 0;margin-left:1px}
+.fl-bv{text-align:right;font:600 13px "Barlow Condensed","Noto Sans TC",sans-serif;font-variant-numeric:tabular-nums}
+.fl-axis{display:grid;grid-template-columns:96px 1fr 1fr 78px;font-size:11px;color:var(--fl-dim);margin-top:4px}.fl-axis span:first-child{grid-column:2;text-align:right;padding-right:8px}.fl-axis span:last-child{padding-left:8px}
+.fl-flag{font-style:normal;font-size:10px;padding:0 3px;margin-left:4px;border:1px solid var(--fl-sel);color:var(--fl-sel);border-radius:2px;vertical-align:1px}.fl-flag.ex{border-color:var(--fl-dim);color:var(--fl-dim)}
+.fl-tm{position:relative}
+.fl-t{position:absolute;overflow:hidden;cursor:pointer;padding:4px 6px;display:flex;flex-direction:column;justify-content:flex-end;transition:background .3s}
+.fl-t:hover{box-shadow:inset 0 0 0 1.5px var(--fl-ink);z-index:2}
+.fl-t b{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.fl-t span{font:600 12px "Barlow Condensed",sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.fl-back{position:absolute;right:0;top:-34px;z-index:3;background:none;border:1px solid var(--fl-hair);color:var(--fl-ink);font:inherit;font-size:12px;padding:3px 10px;cursor:pointer}
+.fl-tip{position:absolute;display:none;pointer-events:none;z-index:5;min-width:210px;padding:9px 11px;background:#fff;color:#241848;font-size:12px;line-height:1.6}.fl-tip .fl-dim{color:#6b5f8a}.fl-tip .fl-warn{color:#B4441A}
+.fl-legend{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px;font-size:11px}.fl-legend i{display:inline-block;width:150px;height:8px}
+.fl-hm{display:grid;gap:2px;align-items:stretch}
+.fl-hd{font:500 10px "Barlow Condensed",sans-serif;color:var(--fl-dim);text-align:center;white-space:nowrap;padding-bottom:2px}.fl-hd.in{color:var(--fl-ink)}
+.fl-hn{background:none;border:0;color:var(--fl-ink);font:inherit;font-size:12px;text-align:right;padding:0 8px 0 0;cursor:pointer;white-space:nowrap;min-height:18px}.fl-hn:hover,.fl-hn.sel{color:var(--fl-sel)}
+.fl-hc{min-height:18px;opacity:.55}.fl-hc.in{opacity:1}
+.fl-rctl{display:flex;gap:12px;align-items:center;font-size:12px;color:var(--fl-dim);margin-bottom:4px}
+.fl-btn{background:none;border:1px solid var(--fl-ink);color:var(--fl-ink);font:inherit;font-size:12px;padding:4px 12px;cursor:pointer;min-height:30px}.fl-btn:hover{background:var(--fl-ink);color:var(--fl-bg)}
+.fl-rctl input{accent-color:#fff;width:180px}
+.fl-rrgc svg{display:block;max-width:100%}.fl-rrgc .ax{stroke:rgba(255,255,255,.3)}
+.fl-rrgc text{font-size:11px;fill:var(--fl-ink)}.fl-rrgc .q{fill:var(--fl-dim);font-size:11px}
+.fl-rrgc .tl{fill:none;stroke:rgba(255,255,255,.4);stroke-width:1}.fl-rrgc .pt{cursor:pointer}.fl-rrgc .pt:hover circle{stroke:#fff;stroke-width:1.5}
+.fl-rrgc .pt.sel circle{stroke:var(--fl-sel);stroke-width:2.5}.fl-rrgc .pt.sel text{fill:var(--fl-sel);font-weight:700}
+.fl-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.fl-sheet table{width:100%;border-collapse:collapse;font-size:12.5px}
+.fl-sheet th,.fl-sheet td{padding:4px 6px 4px 0;border:0;border-bottom:1px solid var(--fl-hair);text-align:left;font-weight:400;color:var(--fl-ink);background:none;white-space:nowrap}
+.fl-sheet td.num{text-align:right;font:600 13px "Barlow Condensed","Noto Sans TC",sans-serif}
+.fl-sheet tr.click{cursor:pointer}.fl-sheet tr.click:hover th,.fl-sheet tr.click:hover td{background:rgba(255,255,255,.06)}
+.fl-code{font:500 11px "Barlow Condensed",sans-serif;color:var(--fl-dim)}
+.fl-link{background:none;border:0;color:var(--fl-sel);font:inherit;font-size:11px;cursor:pointer;padding:0;text-decoration:underline}
+.fl-small{font-size:11.5px;margin:8px 0 0}
+.fl-foot{font-size:11.5px;line-height:1.7;color:var(--fl-dim);margin:24px 0 0;padding-top:10px;border-top:1px solid var(--fl-hair);text-wrap:pretty}
+.fl-empty{padding:40px 0;color:var(--fl-dim)}
+@media (max-width:900px){.fl-grid{grid-template-columns:minmax(0,1fr)}.fl-def{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media (max-width:720px){.fl-sheet{padding:18px 14px}.fl-sheet .fl-title{font-size:32px}.fl-def{grid-template-columns:minmax(0,1fr)}.fl-two{grid-template-columns:minmax(0,1fr)}.fl-bar,.fl-axis{grid-template-columns:76px minmax(0,1fr) minmax(0,1fr) 66px}}
+@media (max-width:760px){.hv-stage.map{height:460px}.hv-stage.trail{height:420px}}
 .hv-side{display:flex;flex-direction:column;gap:10px;min-height:440px}
 .hv-ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .hv-ctl input[type=range]{flex:1;min-width:160px}
@@ -177,7 +245,6 @@ a{color:var(--acc)}
 .wkbars{display:flex;gap:3px;align-items:center;height:60px}
 .wkbars div{flex:1;border-radius:1px;min-height:2px;box-shadow:none!important}
 .scale{height:6px;border-radius:2px;background:linear-gradient(90deg,rgb(var(--dnRGB)),rgba(255,255,255,.1),rgb(var(--upRGB)));margin:4px 0}
-.hv-stage.net{height:600px;background:radial-gradient(ellipse at 50% 45%,rgba(139,124,255,.07),rgba(0,0,0,.25) 70%)}
 .netctl{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px;border-radius:var(--r-tile);z-index:4;background:rgba(16,18,28,.75);border:1px solid var(--hair);backdrop-filter:var(--blur)}
 .netctl button{width:28px;height:28px;border-radius:var(--r-ctl);border:1px solid var(--hair2);background:var(--s2);color:var(--t1);cursor:pointer;font-size:14px}
 .netctl button:hover{background:var(--s3)}
@@ -193,11 +260,11 @@ h1{font-size:28px}}
 @media (max-width:760px){.grid4,.grid6{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4>*:nth-child(odd),.grid6>*:nth-child(odd){border-left:0!important}
 .grid4>*:nth-child(n+3),.grid6>*:nth-child(n+3){border-top:1px solid var(--hair)!important}
 .grid2,.grid3{grid-template-columns:minmax(0,1fr)}.kv{grid-template-columns:repeat(2,minmax(0,1fr))}
-.hide-m{display:none}.bar-row{grid-template-columns:90px minmax(0,1fr) 56px 56px}.dbar{grid-template-columns:80px 1fr 1fr 60px}.hv-stage{height:360px}.hv-stage.net{height:460px}
+.hide-m{display:none}.bar-row{grid-template-columns:90px minmax(0,1fr) 56px 56px}.dbar{grid-template-columns:80px 1fr 1fr 60px}.hv-stage{height:360px}
 .hright{width:100%;justify-content:space-between}}
 /* ═══ 材質系統 ═══
    玻璃 Glass：浮在內容上方的東西（側欄、頂部狀態、彈窗、提示、浮動控制、總覽三大訊號）
-   墨版 Ink plate：主視覺化（關係網路、熱力圖），像印刷海報：深梅色、細顆粒、點線
+   墨版 Ink plate：主視覺化（熱力圖），像印刷海報：深梅色、細顆粒、點線
    實心 Solid：表格、清單、數字條、設定，最好讀、捲動不吃效能 */
 :root{--solid:rgba(17,19,28,.95);--plate:#1B0C24;--plate2:#25112F;--p-ink:#F3E9F7;--p-dim:#B9A6C4;--p-hi:#F2D64B;--p-rule:rgba(243,233,247,.30);
 --f-serif:"Noto Serif TC","Songti TC",serif;--grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
@@ -220,7 +287,7 @@ h1{font-size:28px}}
 .plate .seg button{color:var(--p-dim)}.plate .seg button.on{background:rgba(243,233,247,.14);color:var(--p-ink);box-shadow:none}
 .plate .play{background:var(--p-hi);color:var(--plate)}
 .plate input[type=range]{accent-color:var(--p-hi)}
-.plate .hv-stage,.plate .hv-stage.net{background:transparent;border:0;border-radius:0}
+.plate .hv-stage{background:transparent;border:0;border-radius:0}
 .plate .hv-side .card{background:rgba(0,0,0,.20);border:1px dotted var(--p-rule);backdrop-filter:none;box-shadow:none}
 .plate .hv-side .mt{background:transparent;border:0;border-top:1px dotted var(--p-rule);border-radius:0;padding:8px 2px}
 .plate .hv-side .wkbars div[title]{background:transparent!important}
@@ -258,6 +325,10 @@ html[data-theme="light"] select option{background:#fff;color:var(--t1)}
 html[data-theme="light"] .btn.pri,html[data-theme="light"] .play{color:#fff}
 html[data-theme="light"] .ov{background:rgba(20,22,40,.35)}
 /* 墨版裡的語意色固定用深色版本，不跟著淺色模式變暗 */
+html[data-updown="green"]{--up:#23C483;--dn:#FF5D6C;--up-a:rgba(35,196,131,.14);--dn-a:rgba(255,93,108,.14);--upRGB:35,196,131;--dnRGB:255,93,108}
+html[data-theme="light"][data-updown="green"]{--up:#0B8A57;--dn:#D3283C;--up-a:rgba(11,138,87,.10);--dn-a:rgba(211,40,60,.10);--upRGB:11,138,87;--dnRGB:211,40,60}
+html[data-updown="green"] .plate,html[data-updown="green"] .fl-sheet{--up:#23C483;--dn:#FF5D6C;--up-a:rgba(35,196,131,.16);--dn-a:rgba(255,93,108,.16);--upRGB:35,196,131;--dnRGB:255,93,108}
+.fl-sheet{--up:#FF5D6C;--dn:#23C483}
 .plate{--up:#FF5D6C;--dn:#23C483;--up-a:rgba(255,93,108,.16);--dn-a:rgba(35,196,131,.16);--warn:#F5B14C;--info:#6CA8FF;--info-a:rgba(108,168,255,.16);--warn-a:rgba(245,177,76,.16);--upRGB:255,93,108;--dnRGB:35,196,131;--t1:var(--p-ink);--t2:var(--p-dim);--t3:var(--p-dim);--hair:rgba(243,233,247,.12);--hair2:rgba(243,233,247,.2);--s1:rgba(255,255,255,.04);--s2:rgba(255,255,255,.07);--s3:rgba(255,255,255,.11)}
 /* 強調色：琥珀 */
 html[data-accent="amber"]{--acc:#F5A524;--acc-a:rgba(245,165,36,.15);--acc-b:rgba(245,165,36,.45)}
@@ -341,6 +412,7 @@ h1,h2,.ed-title{text-wrap:balance}
 
 <!-- ① 總覽 -->
 <section class="page on" id="p1">
+  <div class="card ai-sum" id="cardSum"></div>
   <div class="grid2"><div class="card" id="cardAssist"></div><div class="card" id="cardBrief"></div></div>
   <div class="card" id="cardPicks"></div>
   <p class="intro">戰術層：現在處在債務週期哪裡、市場偏冒險還是避險、戰術層要不要轉保守。</p>
@@ -364,7 +436,7 @@ h1,h2,.ed-title{text-wrap:balance}
 <!-- ② 熱點 -->
 <section class="page" id="p2">
   <p class="intro">衛星層的「發現」：哪些產業在變強、錢往哪裡跑。點方塊或泡泡看成分股，按 ▶ 重播近 12 週輪動。</p>
-  <div class="card plate" id="cardHV"></div>
+  <div class="fl-sheet" id="cardHV"></div>
   <div class="ctl"><span class="muted">期間：近 4 週</span>
     <select id="hSort"><option value="rs">排序：相對強弱</option><option value="flow">排序：資金流入</option></select></div>
   <div class="grid2">
@@ -441,6 +513,7 @@ h1,h2,.ed-title{text-wrap:balance}
   <div class="tw-row"><span>主題</span><div class="seg sm" data-tw="theme"><button data-v="dark">深色</button><button data-v="light">淺色</button></div></div>
   <div class="tw-row"><span>密度</span><div class="seg sm" data-tw="density"><button data-v="comfortable">舒適</button><button data-v="compact">緊湊</button></div></div>
   <div class="tw-row"><span>強調色</span><div class="seg sm" data-tw="accent"><button data-v="violet">紫</button><button data-v="amber">琥珀</button></div></div>
+  <div class="tw-row"><span>漲跌顏色</span><div class="seg sm" data-tw="updown"><button data-v="red">紅漲綠跌</button><button data-v="green">綠漲紅跌</button></div></div>
   <div class="tw-row"><span>跑馬燈</span><div class="seg sm" data-tw="tape"><button data-v="on">顯示</button><button data-v="off">隱藏</button></div></div>
   <div class="tiny" style="margin-top:8px">設定只存在這台裝置的瀏覽器。</div>
 </div>
@@ -474,7 +547,6 @@ h1,h2,.ed-title{text-wrap:balance}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <script>
 const APP_BUILD = "2026.11.04-v3";
 const S = { mkt: "tw", mode: "sat", tab: "p1", data: { tw: null, us: null }, macro: null, core: null, alerts: [], shown: 50, series: {}, chart: null, charts: {}, cur: null, iSec: null };
@@ -519,9 +591,9 @@ async function loadJSON(url) {
 
 async function init() {
   $("build").textContent = "　版本 " + APP_BUILD;
-  const res = await Promise.allSettled(["data/tw.json", "data/us.json", "data/alerts.json", "data/macro.json", "data/core.json"].map(loadJSON));
+  const res = await Promise.allSettled(["data/tw.json", "data/us.json", "data/alerts.json", "data/macro.json", "data/core.json", "data/summary.json"].map(loadJSON));
   const v = (i) => res[i].status === "fulfilled" ? res[i].value : null;
-  S.data.tw = v(0); S.data.us = v(1); S.alerts = Array.isArray(v(2)) ? v(2) : []; S.macro = v(3); S.core = v(4);
+  S.data.tw = v(0); S.data.us = v(1); S.alerts = Array.isArray(v(2)) ? v(2) : []; S.macro = v(3); S.core = v(4); S.summary = v(5);
   snapLoad("tw", S.data.tw); snapLoad("us", S.data.us);
   bindTweaks();
   tick();
@@ -610,6 +682,7 @@ function render() {
     if (S.tab === "p2") renderHV();
   }
   renderAlerts();
+  renderSummary();
   renderAssist();
   renderBrief();
   renderPicks();
@@ -765,6 +838,25 @@ function renderBench(d) {
     ${b.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${S.mkt}">${starTd(S.mkt, x.c)}<td>${esc(x.n)} <span class="tiny">${esc(x.c)}</span>${x.pi ? '<div class="tiny">價格指數，不含息</div>' : ""}</td><td class="num ${cls(x.b)}">${pct(x.b, 0)}</td><td class="num">${isNum(x.k) ? Math.round(x.k) : "－"}</td><td class="num">${pct(x.dd, 0)}</td><td class="num">${pct0(x.pos)}</td><td class="num">${isNum(x.pe) ? x.pe.toFixed(1) : "－"}</td><td class="nm">${lightPill(x.l)}${chgMark(S.mkt, x.c, x.l)}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">沒有資料</div>`;
   bindRows($("benchBody"));
+}
+
+// ═════════════ ① 總覽：AI 總結（scripts/ai_summary.py 每天產生 data/summary.json） ═════════════
+function renderSummary() {
+  const el = $("cardSum"), A = S.summary; if (!el) return;
+  if (!A || !A.headline) { el.innerHTML = `<div class="ch"><b>AI 總結</b></div><div class="empty">總結會在下次每日更新後產生。</div>`; return; }
+  const ai = A.source === "claude";
+  const list = (arr) => (arr || []).map((t) => `<li>${esc(t)}</li>`).join("");
+  const old = ["台股", "美股"].some((k) => S.data[k === "台股" ? "tw" : "us"] && A.asof && A.asof[k] && S.data[k === "台股" ? "tw" : "us"].data_date > A.asof[k]);
+  el.innerHTML = `<div class="ch"><b>${ai ? "AI 總結" : "今日摘要"}</b><span class="tiny">${ai ? `由 ${esc(A.model || "Claude")} 根據下方系統資料撰寫` : "規則自動組句（尚未設定 ANTHROPIC_API_KEY，或這次 AI 呼叫失敗）"}　·　${esc(A.generated || "")}</span></div>
+    <p class="ai-head">${esc(A.headline)}</p>
+    ${old ? `<div class="warn">這份總結用的是比目前網站更舊的資料，數字請以下方各區塊為準。</div>` : ""}
+    <div class="ai-secs">${(A.sections || []).map((x) => `<div><div class="ai-t">${esc(x.title)}</div><p>${esc(x.text)}</p></div>`).join("")}</div>
+    <div class="ai-two">
+      <div><div class="ai-t up">偏多的理由</div><ul>${list(A.bull) || "<li>沒有</li>"}</ul></div>
+      <div><div class="ai-t dn">偏空的理由</div><ul>${list(A.bear) || "<li>沒有</li>"}</ul></div>
+      <div><div class="ai-t">依你的規則，這週要留意</div><ul>${list(A.watch) || "<li>沒有</li>"}</ul></div>
+    </div>
+    <p class="tiny" style="margin:10px 0 0">資料：台股 ${esc((A.asof || {})["台股"] || "－")}、美股 ${esc((A.asof || {})["美股"] || "－")}、總經 ${esc((A.asof || {})["總經"] || "－")}。${ai ? "AI 只拿到系統資料、不看新聞，被要求不預測漲跌、不給買賣建議；仍可能寫錯，數字以下方各區塊為準。" : ""}這不是投資建議。</p>`;
 }
 
 // ═════════════ ① 總覽：本週助手（依使用者規則整理該做的事，不是買賣建議） ═════════════
@@ -1505,10 +1597,12 @@ function tvTape() {
 }
 
 // ═══ Tweaks ═══
-const TW = Object.assign({ theme: "dark", density: "comfortable", accent: "violet", tape: RM ? "off" : "on" }, LS.get("mr_tweaks", {}));
+const TW = Object.assign({ theme: "dark", density: "comfortable", accent: "violet", tape: RM ? "off" : "on", updown: "red" }, LS.get("mr_tweaks", {}));
 function applyTweaks() {
   const r = document.documentElement;
-  r.dataset.theme = TW.theme; r.dataset.density = TW.density; r.dataset.accent = TW.accent;
+  r.dataset.theme = TW.theme; r.dataset.density = TW.density; r.dataset.accent = TW.accent; r.dataset.updown = TW.updown;
+  // 漲跌顏色：紅漲綠跌（台股習慣，預設）或綠漲紅跌（美股習慣），全站一起切換
+  if (TW.updown === "green") { UPC = "35,196,131"; DNC = "255,93,108"; } else { UPC = "255,93,108"; DNC = "35,196,131"; }
   const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = TW.theme === "light" ? "#F3F3F6" : "#0B0D14";
   document.querySelectorAll("#twPanel [data-tw]").forEach((g) => g.querySelectorAll("button").forEach((b) => { const on = b.dataset.v === TW[g.dataset.tw]; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }));
   if (window.Chart && Chart.defaults) { Chart.defaults.color = tickC(); Chart.defaults.borderColor = gridC(); }
@@ -1580,404 +1674,227 @@ function a11yFix(root) {
 // ═════════════ ② 產業熱點地圖（可互動） ═════════════
 // 熱力方塊：面積＝近5日成交額比重，顏色＝相對大盤強弱
 // 輪動象限：橫軸＝相對強弱，縱軸＝資金流（台股：法人5日買賣超；美股：成交比重變化），泡泡大小＝成交比重
-const HV = { view: (window.d3 ? "net" : "tree"), week: -1, sel: null, timer: null };
-const UPC = "255,93,108", DNC = "35,196,131";
-const hvVal = (s) => HV.week < 0 ? s.rs4 : (s.wk ? s.wk[HV.week] : null);
-const hvMax = () => HV.week < 0 ? 0.08 : 0.04;
-const hvFlow = (s) => S.mkt === "tw" ? s.i5 : s.share_chg;
-const hvFlowTxt = (v) => S.mkt === "tw" ? yi(v) : isNum(v) ? (v > 0 ? "+" : "") + (v * 100).toFixed(1) + " 個百分點" : "－";
-function heatBg(v, mx) {
-  if (!isNum(v)) return "rgba(255,255,255,.04)";
-  const c = v > 0 ? UPC : DNC, a = Math.min(1, Math.abs(v) / mx) * 0.72 + 0.1;
-  return `rgba(${c},${a.toFixed(2)})`;
-}
-function hvStop() { if (HV.timer) { clearInterval(HV.timer); HV.timer = null; } const b = $("hvPlay"); if (b) b.textContent = "▶"; }
+const HV = { week: -1, sel: null, timer: null };
+let UPC = "255,93,108", DNC = "35,196,131";   // 會被 Tweaks 的漲跌顏色切換
 
+function hvSectors() { const d = S.data[S.mkt]; return d ? (d.sectors || []).filter((s) => isNum(s.share) && s.share > 0 && (isNum(s.rs4) || (s.wk && s.wk.length))) : []; }
+
+// ═════════════ ② 熱點：資金流向（2026-11-05 依使用者的資金流向圖設計原則重做） ═════════════
+// 原則：①全站同一套漲跌色（Tweaks 可切換），色階以 0 為中心、接近 0 用灰，數字一律加 ▲▼
+//       ②每張圖標出指標定義、資料時點（盤後）、統計區間　③可切換金額／佔產業成交額比例
+//       ④排名用從 0 往左右分開的長條；Treemap 面積＝市值、顏色＝資金流；熱力圖＝產業 × 日期；RRG 輪動
+//       ⑤先看產業，點進去才看個股；手機不畫 Treemap　⑥標示異常量、除權息；不寫買進賣出
+const FL = { metric: null, win: 5, view: "ratio", sel: null };
+const FL_WINS = [[1, "1 日"], [5, "5 日"], [20, "20 日"]];
+const FL_METRIC = {
+  i: { name: "三大法人買賣超", short: "法人", def: "證交所／櫃買中心公布的三大法人買賣超股數 × 當日收盤價（盤後資料）。金額是近似值。" },
+  e: { name: "價量估算", short: "估算", def: "用每日收盤價在當日高低區間的位置 × 成交額，估算主動買賣力道（Chaikin 資金流量的算法）。這是估算，不是實際的內外盤成交。" },
+};
+const flMetrics = () => S.mkt === "tw" ? ["i", "e"] : ["e"];
+const flWinIdx = () => ({ 1: 0, 5: 1, 20: 2 })[FL.win];
+const flAmt = (v) => !isNum(v) ? "－" : S.mkt === "tw"
+  ? (Math.abs(v) >= 1e8 ? (v / 1e8).toFixed(Math.abs(v) >= 1e10 ? 0 : 1) + " 億" : (v / 1e4).toFixed(0) + " 萬")
+  : (Math.abs(v) >= 1e9 ? "$" + (v / 1e9).toFixed(1) + "B" : "$" + (v / 1e6).toFixed(0) + "M");
+const flSign = (v) => !isNum(v) || v === 0 ? "" : v > 0 ? "▲" : "▼";
+const flFmt = (v, ratio) => !isNum(v) ? "－" : `${flSign(v)} ${ratio ? Math.abs(v * 100).toFixed(1) + "%" : flAmt(Math.abs(v))}`;
+// 以 0 為中心的雙色色階：流入＝漲色、流出＝跌色、接近 0（< 最大值的 6%）＝灰
+function flColor(v, mx, aMin = 0.22) {
+  if (!isNum(v) || !mx) return "rgba(200,194,224,.10)";
+  const a = Math.min(1, Math.abs(v) / mx);
+  if (a < 0.06) return "rgba(200,194,224,.16)";
+  return `rgba(${v > 0 ? UPC : DNC},${(aMin + a * (0.92 - aMin)).toFixed(2)})`;
+}
+// 產業在目前視窗的值：金額或佔產業成交額比例
+function flSecVals() {
+  const d = S.data[S.mkt], F = d && d.flow; if (!F) return [];
+  const n = FL.win, k = FL.metric;
+  return Object.entries(F.sec).map(([name, o]) => {
+    const sum = (arr) => { const w = arr ? arr.slice(-n).filter(isNum) : []; return w.length ? w.reduce((a, v) => a + v, 0) : null; };   // 區間內完全沒有資料就是「沒有資料」，不當成 0
+    const amt = o[k] ? sum(o[k]) : null, tv = sum(o.t);
+    const cnt = d.stocks.filter((x) => x.sec === name && !x.etf);
+    return { name, amt, tv, ratio: isNum(amt) && tv ? amt / tv : null, n: cnt.length,
+      mcap: cnt.reduce((a, x) => a + (x.mcap || 0), 0), spk: cnt.filter((x) => x.fl && x.fl.spk).length };
+  }).filter((s) => isNum(s.amt) && s.tv > 0);
+}
+const flVal = (s) => FL.view === "ratio" ? s.ratio : s.amt;
+function flStockVal(x) {
+  const f = x.fl || {}, i = flWinIdx(), a = f[FL.metric] ? f[FL.metric][i] : null, t = f.t ? f.t[i] : null;
+  return { amt: a, tv: t, ratio: isNum(a) && t ? a / t : null };
+}
+
+function renderHV() {
+  const el = $("cardHV"), d = S.data[S.mkt]; if (!el) return;
+  if (!d || !d.flow) { el.innerHTML = `<div class="fl"><div class="fl-empty">資金流向的資料在下次每日更新後才會出現。</div></div>`; return; }
+  const ms = flMetrics(); if (!ms.includes(FL.metric)) FL.metric = ms[0];
+  const secs = flSecVals(); if (FL.sel && !secs.find((s) => s.name === FL.sel)) FL.sel = null;
+  const F = d.flow, n = FL.win, dates = F.d.slice(-n), tw = S.mkt === "tw";
+  const seg = (key, opts) => `<div class="fl-seg" role="group">${opts.map(([v, t]) => `<button data-k="${key}" data-v="${v}" class="${String(FL[key]) === String(v) ? "on" : ""}" aria-pressed="${String(FL[key]) === String(v)}">${t}</button>`).join("")}</div>`;
+  el.innerHTML = `<div class="fl">
+    <header class="fl-head">
+      <div><div class="fl-kicker">衛星層 · 第一道濾網：熱點</div><h1 class="fl-title">資金流向</h1></div>
+      <div class="fl-ctl">
+        <label>指標${seg("metric", ms.map((m) => [m, FL_METRIC[m].name]))}</label>
+        <label>區間${seg("win", FL_WINS)}</label>
+        <label>看法${seg("view", [["ratio", "佔產業成交額"], ["amt", "金額"]])}</label>
+      </div>
+    </header>
+    <dl class="fl-def">
+      <div><dt>指標</dt><dd>${esc(FL_METRIC[FL.metric].def)}</dd></div>
+      <div><dt>區間</dt><dd>近 ${n} 個交易日（${esc(dates[0])}${n > 1 ? "–" + esc(dates[dates.length - 1]) : ""}），盤後資料，每日收盤後更新</dd></div>
+      <div><dt>分類</dt><dd>${tw ? "證交所產業別（上市＋上櫃個股，不含 ETF）" : "GICS 11 大類（S&amp;P 500＋S&amp;P 400 個股）"}</dd></div>
+      <div><dt>看法</dt><dd>${FL.view === "ratio" ? "淨流入 ÷ 該產業同期成交額。小產業的異動也看得到。" : "淨流入金額。權值股多的產業金額天生較大。"}</dd></div>
+    </dl>
+    <div class="fl-grid">
+      <section class="fl-card fl-rank"><h2>產業排名<span>${FL.view === "ratio" ? "佔產業成交額" : "淨流入金額"} · 點一下看個股</span></h2><div id="flRank"></div></section>
+      <section class="fl-card fl-map"><h2>全市場地圖<span>面積＝市值 · 顏色＝${FL.view === "ratio" ? "佔成交額比例" : "淨流入金額"}</span></h2><div class="fl-tm" id="flTm"></div><div class="fl-legend" id="flLegend"></div></section>
+      <section class="fl-card fl-heat"><h2>輪動熱力圖<span>產業 × 日期 · 每格＝當天${FL_METRIC[FL.metric].short}淨額 ÷ 當天產業成交額 · 近 ${F.d.length} 個交易日</span></h2><div id="flHeat"></div></section>
+      <section class="fl-card fl-rrg"><h2>相對輪動<span>橫軸＝近 4 週相對大盤強弱 · 縱軸＝成交比重比前 4 週多或少</span></h2>
+        <div class="fl-rctl"><button class="fl-btn" id="hvPlay">${HV.timer ? "暫停" : "播放 12 週"}</button><input type="range" id="hvWk" aria-label="選擇週次" min="0" max="${Math.max(0, (d.weeks || []).length - 1)}" step="1"><span id="hvWkL"></span></div>
+        <div id="hvStage" class="fl-rrgc"></div></section>
+      <section class="fl-card fl-drill" id="flDrill"></section>
+    </div>
+    <p class="fl-foot">資金流向呈現的是資金現象，不是交易建議。熱度只是衛星層四道濾網的第一道；異常量（單日成交額超過前 20 日平均 5 倍，可能是鉅額交易或指數調整）和除權息會在個股旁標示。</p>
+  </div>`;
+  el.querySelectorAll(".fl-seg button").forEach((b) => b.onclick = () => { const k = b.dataset.k; FL[k] = k === "win" ? Number(b.dataset.v) : b.dataset.v; hvStop(); renderHV(); });
+  flRank(secs); flTreemap(secs); flHeat(); flDrill(secs);
+  const weeks = d.weeks || [];
+  $("hvWk").oninput = () => { hvStop(); const v = Number($("hvWk").value); HV.week = v >= weeks.length - 1 ? -1 : v; drawHV(); };
+  $("hvPlay").onclick = () => {
+    if (HV.timer) { hvStop(); return; }
+    HV.week = 0; drawHV(); $("hvPlay").textContent = "暫停";
+    HV.timer = setInterval(() => { HV.week += 1; if (HV.week >= weeks.length - 1) { HV.week = -1; hvStop(); } drawHV(); }, 900);
+  };
+  drawHV();
+}
+function hvStop() { if (HV.timer) { clearInterval(HV.timer); HV.timer = null; } const b = $("hvPlay"); if (b) b.textContent = "播放 12 週"; }
+function flSelect(name) { FL.sel = FL.sel === name ? null : name; renderHV(); }
+
+// 產業排名：從 0 往左右分開的長條
+function flRank(secs) {
+  const rows = secs.slice().sort((a, b) => (flVal(b) || 0) - (flVal(a) || 0)), mx = Math.max(1e-12, ...rows.map((s) => Math.abs(flVal(s) || 0)));
+  $("flRank").innerHTML = `<div class="fl-bars">${rows.map((s) => { const v = flVal(s), w = Math.abs(v) / mx * 100;
+    return `<button class="fl-bar${s.name === FL.sel ? " sel" : ""}" data-sec="${esc(s.name)}" title="${esc(s.name)}：淨流入 ${flFmt(s.amt)}，佔成交額 ${flFmt(s.ratio, 1)}">
+      <span class="fl-bn">${esc(s.name)}${s.spk ? `<i class="fl-flag" title="${s.spk} 檔近 5 日有異常量">異</i>` : ""}</span>
+      <span class="fl-bl">${v < 0 ? `<i style="width:${w}%;background:${flColor(v, mx, .55)}"></i>` : ""}</span><span class="fl-br">${v > 0 ? `<i style="width:${w}%;background:${flColor(v, mx, .55)}"></i>` : ""}</span>
+      <span class="fl-bv ${v > 0 ? "up" : v < 0 ? "dn" : ""}">${flFmt(v, FL.view === "ratio")}</span></button>`; }).join("")}</div>
+    <div class="fl-axis"><span>← 流出</span><span>流入 →</span></div>`;
+  $("flRank").querySelectorAll("[data-sec]").forEach((b) => b.onclick = () => flSelect(b.dataset.sec));
+}
+
+// Treemap：產業層（面積＝產業市值）；選了產業就換成該產業個股（面積＝個股市值）
+function flTreemap(secs) {
+  const box = $("flTm"); if (!box) return;
+  if (window.matchMedia("(max-width:720px)").matches) { box.innerHTML = `<p class="fl-dim">手機畫面方塊太小，請看左邊的產業排名。</p>`; $("flLegend").innerHTML = ""; return; }
+  const W = box.clientWidth || 520, H = 360, d = S.data[S.mkt];
+  let items, mx;
+  if (FL.sel) {
+    const st = d.stocks.filter((x) => x.sec === FL.sel && !x.etf && x.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 40);
+    items = st.map((x) => { const sv = flStockVal(x); return { key: x.c, label: S.mkt === "tw" ? x.n : x.c, v: x.mcap, val: FL.view === "ratio" ? sv.ratio : sv.amt, stk: x }; });
+  } else items = secs.filter((s) => s.mcap > 0).map((s) => ({ key: s.name, label: s.name, v: s.mcap, val: flVal(s), s }));
+  mx = Math.max(1e-12, ...items.map((i) => Math.abs(i.val || 0)));
+  const lay = flSquarify(items, W, H);
+  box.style.height = H + "px";
+  box.innerHTML = (FL.sel ? `<button class="fl-back" id="flBack">← 全部產業</button>` : "") + lay.map((t) => {
+    const big = t.w > 58 && t.h > 30;
+    return `<div class="fl-t" data-k="${esc(t.key)}" style="left:${t.x}px;top:${t.y}px;width:${Math.max(0, t.w - 2)}px;height:${Math.max(0, t.h - 2)}px;background:${flColor(t.val, mx)}">
+      ${big ? `<b>${esc(t.label)}</b><span>${flFmt(t.val, FL.view === "ratio")}</span>` : ""}</div>`; }).join("") + `<div class="fl-tip" id="flTip"></div>`;
+  $("flLegend").innerHTML = `<span>流出</span><i style="background:linear-gradient(90deg,rgba(${DNC},.92),rgba(200,194,224,.16) 47%,rgba(200,194,224,.16) 53%,rgba(${UPC},.92))"></i><span>流入</span><span class="fl-dim">（灰＝接近 0；${FL.sel ? `${esc(FL.sel)}市值前 40 檔` : "點產業往下看個股"}）</span>`;
+  const tip = $("flTip"), byKey = Object.fromEntries(lay.map((t) => [String(t.key), t]));
+  box.querySelectorAll(".fl-t").forEach((el) => {
+    const t = byKey[el.dataset.k];
+    el.onmousemove = (e) => {
+      const r = box.getBoundingClientRect(); let x = e.clientX - r.left + 12, y = e.clientY - r.top + 12; if (x > W - 220) x -= 232;
+      tip.innerHTML = t.stk ? flStockTip(t.stk) : flSecTip(t.s);
+      tip.style.left = x + "px"; tip.style.top = y + "px"; tip.style.display = "block";
+    };
+    el.onmouseleave = () => { tip.style.display = "none"; };
+    el.onclick = () => FL.sel ? openDetail(S.mkt, el.dataset.k) : flSelect(el.dataset.k);
+  });
+  const bk = $("flBack"); if (bk) bk.onclick = () => flSelect(FL.sel);
+}
+function flSecTip(s) { return `<b>${esc(s.name)}</b><div>淨流入 ${flFmt(s.amt)}　佔成交額 ${flFmt(s.ratio, 1)}</div><div>產業市值 ${flAmt(s.mcap).replace(/^\$/, "$")}　${s.n} 檔</div><div class="fl-dim">${esc(FL_METRIC[FL.metric].name)} · 近 ${FL.win} 日 · 盤後</div>`; }
+function flStockTip(x) { const v = flStockVal(x); return `<b>${esc(x.n)}</b> <span class="fl-dim">${esc(x.c)}</span><div>淨流入 ${flFmt(v.amt)}　佔成交額 ${flFmt(v.ratio, 1)}</div><div>市值 ${flAmt(x.mcap)}　今日 ${pct(x.ch, 2)}</div>${x.fl && x.fl.spk ? `<div class="fl-warn">異常量 ${esc(x.fl.spk)}</div>` : ""}${x.exd ? `<div class="fl-warn">除權息 ${esc(x.exd)}</div>` : ""}`; }
 // squarified treemap（Bruls 等人的演算法），回傳每塊的 x, y, w, h
-function treemap(items, W, H) {
-  const total = items.reduce((a, b) => a + b.v, 0);
-  if (!total) return [];
+function flSquarify(items, W, H) {
+  const total = items.reduce((a, b) => a + b.v, 0); if (!total) return [];
   const nodes = items.map((it) => ({ ...it, a: it.v * W * H / total })).sort((a, b) => b.a - a.a);
   const out = []; let x = 0, y = 0, w = W, h = H, row = [];
   const worst = (r, len) => { const sum = r.reduce((a, b) => a + b.a, 0), mx = Math.max(...r.map((q) => q.a)), mn = Math.min(...r.map((q) => q.a)); return Math.max(len * len * mx / (sum * sum), sum * sum / (len * len * mn)); };
   const layout = (r) => { const sum = r.reduce((a, b) => a + b.a, 0);
-    if (w >= h) { const cw = sum / h; let cy = y; r.forEach((q) => { const rh = q.a / cw; out.push({ ...q, x, y: cy, w: cw, h: rh }); cy += rh; }); x += cw; w -= cw; }
-    else { const rh = sum / w; let cx = x; r.forEach((q) => { const cw = q.a / rh; out.push({ ...q, x: cx, y, w: cw, h: rh }); cx += cw; }); y += rh; h -= rh; } };
+    if (w >= h) { const cw = sum / h; let cy = y; r.forEach((q) => { out.push({ ...q, x, y: cy, w: cw, h: q.a / cw }); cy += q.a / cw; }); x += cw; w -= cw; }
+    else { const rh = sum / w; let cx = x; r.forEach((q) => { out.push({ ...q, x: cx, y, w: q.a / rh, h: rh }); cx += q.a / rh; }); y += rh; h -= rh; } };
   let i = 0;
-  while (i < nodes.length) { const len = Math.min(w, h), n = nodes[i];
-    if (!row.length || worst([...row, n], len) <= worst(row, len)) { row.push(n); i++; } else { layout(row); row = []; } }
+  while (i < nodes.length) { const len = Math.min(w, h), nd = nodes[i]; if (!row.length || worst([...row, nd], len) <= worst(row, len)) { row.push(nd); i++; } else { layout(row); row = []; } }
   if (row.length) layout(row);
   return out;
 }
 
-function hvSectors() { const d = S.data[S.mkt]; return d ? (d.sectors || []).filter((s) => isNum(s.share) && s.share > 0 && (isNum(s.rs4) || (s.wk && s.wk.length))) : []; }
-
-function renderHV() {
-  const d = S.data[S.mkt], el = $("cardHV");
-  if (!el) return;
-  const secs = hvSectors();
-  if (!d || !secs.length) { el.innerHTML = `<div class="ch"><b>產業熱點地圖</b></div><div class="empty">沒有族群資料</div>`; return; }
-  const weeks = d.weeks || [];
-  if (HV.sel && !secs.find((s) => s.name === HV.sel)) HV.sel = null;
-  if (!HV.sel) { const pos = secs.filter((s) => (s.rs4 ?? -1) > 0).sort((a, b) => b.share - a.share); HV.sel = (pos[0] || secs.slice().sort((a, b) => b.share - a.share)[0]).name; }
-  el.innerHTML = `<div class="ed-head"><div><div class="kicker" id="hvKick"></div><h2 class="ed-title" id="hvTitle"></h2></div>
-      <div class="seg sm" id="hvSeg">${window.d3 ? `<button data-v="net"${HV.view === "net" ? ' class="on"' : ""}>關係網路</button>` : ""}<button data-v="tree"${HV.view === "tree" ? ' class="on"' : ""}>熱力方塊</button><button data-v="quad"${HV.view === "quad" ? ' class="on"' : ""}>輪動象限</button></div></div>
-    <div class="ed-rule"></div><div class="ed-sub" id="hvSub"></div>
-    <div class="hv-ctl"><button class="play" id="hvPlay" title="重播近12週" aria-label="重播近12週">${HV.timer ? "❚❚" : "▶"}</button>
-      <input type="range" id="hvWk" aria-label="選擇週次" min="0" max="${weeks.length}" step="1" value="${HV.week < 0 ? weeks.length : HV.week}">
-      <span class="muted" id="hvWkL" style="min-width:150px"></span></div>
-    <div class="hv"><div class="hv-stage" id="hvStage"></div><div class="hv-side" id="hvSide"></div></div>
-    <div class="ed-foot"><div id="hvF1"></div><div id="hvF2"></div><div id="hvF3"></div></div>`;
-  el.querySelectorAll("#hvSeg button").forEach((b) => b.onclick = () => { HV.view = b.dataset.v; el.querySelectorAll("#hvSeg button").forEach((x) => x.classList.toggle("on", x === b)); drawHV(true); });
-  $("hvWk").oninput = () => { hvStop(); if (HV.view === "net") NET.color = "heat"; const v = Number($("hvWk").value); HV.week = v >= weeks.length ? -1 : v; drawHV(false); };
-  $("hvPlay").onclick = () => {
-    if (HV.timer) { hvStop(); return; }
-    HV.week = 0; if (HV.view === "net") { NET.color = "heat"; document.querySelectorAll("#netCol button").forEach((x) => x.classList.toggle("on", x.dataset.c === "heat")); } drawHV(false); $("hvPlay").textContent = "❚❚";
-    HV.timer = setInterval(() => { HV.week += 1; if (HV.week >= weeks.length) { HV.week = -1; hvStop(); } drawHV(false); }, 900);
-  };
-  drawHV(true);
+// 輪動熱力圖：產業 × 日期，每格＝當天淨額 ÷ 當天產業成交額（比例才能跨產業比較）
+function flHeat() {
+  const d = S.data[S.mkt], F = d.flow, k = FL.metric, box = $("flHeat");
+  const rows = Object.entries(F.sec).map(([name, o]) => ({ name, r: (o[k] || []).map((v, i) => isNum(v) && o.t[i] ? v / o.t[i] : null) }))
+    .filter((x) => x.r.some(isNum));
+  const tot = (x) => x.r.slice(-FL.win).reduce((a, v) => a + (isNum(v) ? v : 0), 0);
+  rows.sort((a, b) => tot(b) - tot(a));
+  const all = rows.flatMap((x) => x.r).filter(isNum).map(Math.abs).sort((a, b) => a - b);
+  const mx = all.length ? all[Math.floor((all.length - 1) * 0.95)] : 1;   // 用第 95 百分位當色階上限，避免單一極端值把其他格洗淡
+  const nd = F.d.length, from = nd - FL.win;
+  box.innerHTML = `<div class="fl-hm" style="grid-template-columns:minmax(78px,auto) repeat(${nd},minmax(0,1fr))">
+    <span></span>${F.d.map((dt, i) => `<span class="fl-hd${i >= from ? " in" : ""}">${i % 5 === 4 || i === nd - 1 ? esc(dt) : ""}</span>`).join("")}
+    ${rows.map((x) => `<button class="fl-hn${x.name === FL.sel ? " sel" : ""}" data-sec="${esc(x.name)}">${esc(x.name)}</button>${x.r.map((v, i) => `<span class="fl-hc${i >= from ? " in" : ""}" style="background:${flColor(v, mx)}" title="${esc(x.name)} ${esc(F.d[i])}：${flFmt(v, 1)}"></span>`).join("")}`).join("")}
+  </div><div class="fl-legend"><span>流出</span><i style="background:linear-gradient(90deg,rgba(${DNC},.92),rgba(200,194,224,.16) 47%,rgba(200,194,224,.16) 53%,rgba(${UPC},.92))"></i><span>流入</span><span class="fl-dim">排序＝近 ${FL.win} 日合計；亮框＝目前區間；色階上限 ±${(mx * 100).toFixed(1)}%</span></div>`;
+  box.querySelectorAll("[data-sec]").forEach((b) => b.onclick = () => flSelect(b.dataset.sec));
 }
 
-const HV_COPY = {
-  net: ["誰跟誰一起動？", "產業關係網路"],
-  tree: ["錢往哪裡跑？", "產業熱力方塊"],
-  quad: ["誰在領漲、誰在退場？", "產業輪動象限"],
-};
-function hvFoot() {
-  const d = S.data[S.mkt]; if (!d || !$("hvF1")) return;
-  const [k, t] = HV_COPY[HV.view] || HV_COPY.tree;
-  $("hvKick").textContent = k; $("hvTitle").textContent = t;
-  const mk = S.mkt === "tw" ? "台股" : "美股", flow = S.mkt === "tw" ? "近 5 日三大法人買賣超" : "成交額比重變化";
-  $("hvSub").textContent = HV.view === "net" ? `每個族群取成交額前 30 檔　·　${mk}　·　${d.data_date || ""}`
-    : HV.view === "tree" ? `面積＝近 5 日成交額比重　·　顏色＝相對大盤強弱　·　${mk}` : `橫軸＝相對大盤強弱　·　縱軸＝${flow}　·　${mk}`;
-  const scale = `<span>弱</span><span class="scale"></span><span>強</span>`;
-  const F = {
-    net: [`<b>節點</b>大圓＝族群，面積＝近 5 日成交額比重；小點＝成交額前 30 大成分股。`,
-      `<b>連線</b>細點線＝族群與成分股；粗點線＝近 12 週走勢相關係數 > 0.7 的族群，代表同步輪動。`,
-      NET.color === "heat" ? `<b>顏色</b>強弱色：${scale}（族群看相對大盤、個股看近 1 月）` : `<b>資料</b>${mk}掃描 ${d.scanned} 檔，${d.data_date || ""} 收盤。滑鼠移到節點看關聯，點一下看詳情。`],
-    tree: [`<b>面積</b>近 5 日成交額佔掃描股票的比重。`, `<b>顏色</b>${scale}　相對大盤報酬，拉動上方時間軸看每一週。`, `<b>資料</b>${mk}掃描 ${d.scanned} 檔，${d.data_date || ""} 收盤。`],
-    quad: [`<b>象限</b>右上＝領漲且資金流入；左上＝資金先進場、還沒漲；右下＝有漲但資金流出。`, `<b>大小</b>泡泡面積＝近 5 日成交額比重。縱軸固定用最新資料。`, `<b>資料</b>${mk}掃描 ${d.scanned} 檔，${d.data_date || ""} 收盤。`],
-  }[HV.view] || [];
-  ["hvF1", "hvF2", "hvF3"].forEach((id, i) => { $(id).innerHTML = F[i] || ""; });
-}
-function hvLabel() {
-  hvFoot();
-  const d = S.data[S.mkt], weeks = d.weeks || [];
-  const L = $("hvWkL"); if (L) L.textContent = HV.week < 0 ? "近 4 週累計（相對大盤）" : `第 ${HV.week + 1}／${weeks.length} 週：${weeks[HV.week]} 那週${HV.week === weeks.length - 1 ? "（本週到目前）" : ""}`;
-  const r = $("hvWk"); if (r) r.value = HV.week < 0 ? weeks.length : HV.week;
-  const h = $("hvHint"); if (h && false) h.textContent = HV.view === "tree" ? "方塊大小＝近5日成交額比重" : (S.mkt === "tw" ? "縱軸＝近5日三大法人買賣超（最新）" : "縱軸＝成交額比重變化（最新）") + "；泡泡大小＝成交額比重";
+// 個股（往下鑽）：選了產業才列出
+function flDrill(secs) {
+  const box = $("flDrill"), d = S.data[S.mkt];
+  if (!FL.sel) { box.innerHTML = `<h2>個股<span>先點選一個產業</span></h2><p class="fl-dim">在產業排名、地圖或熱力圖點一個產業，這裡會列出該產業淨流入（流出）最多的個股。</p>`; return; }
+  const st = d.stocks.filter((x) => x.sec === FL.sel && !x.etf && x.fl).map((x) => ({ x, v: flStockVal(x) })).filter((o) => isNum(o.v.amt));
+  const by = (o) => FL.view === "ratio" ? (o.v.tv > 0 ? o.v.ratio : null) : o.v.amt;
+  const ok = st.filter((o) => isNum(by(o)) && (FL.view === "amt" || o.x.liq));
+  const inn = ok.slice().sort((a, b) => by(b) - by(a)).slice(0, 8).filter((o) => by(o) > 0), out = ok.slice().sort((a, b) => by(a) - by(b)).slice(0, 8).filter((o) => by(o) < 0);
+  const s = secs.find((x) => x.name === FL.sel);
+  const tbl = (arr, title) => `<div><h3>${title}</h3><table><tbody>${arr.map(({ x, v }) => `<tr class="click" data-c="${esc(x.c)}" data-m="${S.mkt}">
+    <th scope="row"><span class="fl-code">${esc(x.c)}</span> ${esc(x.n)}${x.fl.spk ? ` <i class="fl-flag" title="近 5 日異常量 ${esc(x.fl.spk)}">異</i>` : ""}${x.exd ? ` <i class="fl-flag ex" title="除權息 ${esc(x.exd)}">息</i>` : ""}</th>
+    <td class="num ${v.amt > 0 ? "up" : "dn"}">${flFmt(v.amt)}</td><td class="num fl-dim">${flFmt(v.ratio, 1)}</td></tr>`).join("") || `<tr><td class="fl-dim">沒有</td></tr>`}</tbody></table></div>`;
+  box.innerHTML = `<h2>${esc(FL.sel)}<span>${s ? `淨流入 ${flFmt(s.amt)} · 佔成交額 ${flFmt(s.ratio, 1)} · ${s.n} 檔` : ""} · <button class="fl-link" id="flClr">取消選取</button></span></h2>
+    <div class="fl-two">${tbl(inn, "流入最多")}${tbl(out, "流出最多")}</div>
+    <p class="fl-dim fl-small">${FL.view === "ratio" ? "比例排序只列流動性足夠的個股，避免冷門股的小額買賣被放大。" : ""}「異」＝近 5 日有異常量，「息」＝即將除權息，這兩種情況的資金流可能失真。</p>`;
+  bindRows(box);
+  $("flClr").onclick = () => flSelect(FL.sel);
 }
 
-function hvTip(e, s) {
-  const tip = $("hvTip"), st = $("hvStage"); if (!tip || !st) return;
-  tip.innerHTML = `<b>${esc(s.name)}</b><div class="tiny">${s.n} 檔</div>
-    <div>相對強弱 <span class="${cls(hvVal(s))}">${pct(hvVal(s), 1)}</span></div><div>資金 <span class="${cls(hvFlow(s))}">${hvFlowTxt(hvFlow(s))}</span></div><div>成交比重 ${pct0(s.share)}</div>`;
-  const r = st.getBoundingClientRect(); let x = e.clientX - r.left + 14, y = e.clientY - r.top + 12;
-  if (x > r.width - 190) x -= 200; if (y > r.height - 110) y -= 120;
-  tip.style.left = x + "px"; tip.style.top = y + "px"; tip.style.display = "block";
-}
-
-function drawHV(full) {
-  const st = $("hvStage"); if (!st) return;
-  const secs = hvSectors(), mx = hvMax(), by = Object.fromEntries(secs.map((s) => [s.name, s]));
-  const W = st.clientWidth || 800, H = st.clientHeight || 440;
-  hvLabel();
-  st.classList.toggle("net", HV.view === "net");
-  if (HV.view === "net") {
-    if (full || !NET.canvas || !st.contains(NET.canvas)) { netInit(st); } else netDraw();
-    renderHVSide(); return;
-  }
-  if (NET.sim) { NET.sim.stop(); NET.canvas = null; }
-  if (HV.view === "tree") {
-    if (!full && st.querySelector(".tile")) {
-      st.querySelectorAll(".tile").forEach((t) => { const s = by[t.dataset.n]; if (!s) return; const v = hvVal(s); t.style.background = heatBg(v, mx); t.querySelector(".tv").textContent = pct(v, 1); });
-    } else {
-      const lay = treemap(secs.map((s) => ({ s, v: s.share })), W, H);
-      st.innerHTML = lay.map((t) => { const v = hvVal(t.s), sz = t.w < 44 || t.h < 26 ? "xs" : t.w < 76 || t.h < 40 ? "s" : "";
-        return `<div class="tile ${sz}${t.s.name === HV.sel ? " sel" : ""}" data-n="${esc(t.s.name)}" style="left:${t.x / W * 100}%;top:${t.y / H * 100}%;width:calc(${t.w / W * 100}% - 3px);height:calc(${t.h / H * 100}% - 3px);background:${heatBg(v, mx)}">
-          <div class="tn">${esc(t.s.name)}</div><div class="tv">${pct(v, 1)}</div></div>`; }).join("") + `<div class="tip" id="hvTip"></div>`;
-      st.querySelectorAll(".tile").forEach((t) => {
-        t.onmousemove = (e) => hvTip(e, by[t.dataset.n]);
-        t.onmouseleave = () => { $("hvTip").style.display = "none"; };
-        t.onclick = () => hvSelect(t.dataset.n);
-      });
-    }
-  } else {
-    const pad = 46, xs = secs.map(hvVal).filter(isNum), ys = secs.map(hvFlow).filter(isNum);
-    const xm = Math.max(0.01, ...xs.map(Math.abs)) * 1.15, ym = Math.max(1e-9, ...ys.map(Math.abs)) * 1.15;
-    const X = (v) => pad + ((isNum(v) ? v : 0) + xm) / (2 * xm) * (W - 2 * pad);
-    const Y = (v) => H - pad - ((isNum(v) ? v : 0) + ym) / (2 * ym) * (H - 2 * pad);
-    const smax = Math.max(...secs.map((s) => s.share));
-    const R = (s) => 7 + Math.sqrt(s.share / smax) * 30;
-    const fill = (s) => { const v = hvVal(s); if (!isNum(v)) return "rgba(255,255,255,.2)"; const a = Math.min(1, Math.abs(v) / mx) * 0.6 + 0.3; return `rgba(${v > 0 ? UPC : DNC},${a.toFixed(2)})`; };
-    if (!full && st.querySelector("svg.qsvg")) {
-      st.querySelectorAll("g.b").forEach((g) => { const s = by[g.dataset.n]; if (!s) return; g.style.transform = `translate(${X(hvVal(s))}px,${Y(hvFlow(s))}px)`; g.querySelector("circle").style.fill = fill(s); });
-      return;
-    }
-    const order = secs.slice().sort((a, b) => b.share - a.share);
-    const labeled = new Set(order.slice(0, 14).map((s) => s.name));
-    st.innerHTML = `<svg class="qsvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-      <defs><radialGradient id="qg" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="rgba(139,92,246,.10)"/><stop offset="1" stop-color="rgba(0,0,0,0)"/></radialGradient></defs>
-      <rect x="0" y="0" width="${W}" height="${H}" fill="url(#qg)"/>
-      <rect x="${W / 2}" y="${pad / 2}" width="${W / 2 - pad / 2}" height="${H / 2 - pad / 2}" fill="rgba(${UPC},.05)"/>
-      <line x1="${pad}" x2="${W - pad}" y1="${H / 2}" y2="${H / 2}" stroke="rgba(255,255,255,.18)"/><line y1="${pad / 2}" y2="${H - pad / 2}" x1="${W / 2}" x2="${W / 2}" stroke="rgba(255,255,255,.18)"/>
-      <text class="ql" x="${W - pad / 2}" y="${pad / 2 + 14}" text-anchor="end">領漲＋資金流入 ↗</text>
-      <text class="ql" x="${pad / 2}" y="${pad / 2 + 14}">資金先進場、還沒漲</text>
-      <text class="ql" x="${W - pad / 2}" y="${H - pad / 2 - 6}" text-anchor="end">有漲但資金流出（小心）</text>
-      <text class="ql" x="${pad / 2}" y="${H - pad / 2 - 6}">弱勢＋資金流出</text>
-      <text class="ql" x="${W / 2}" y="${H - 6}" text-anchor="middle">← 弱於大盤　相對強弱　強於大盤 →</text>
-      <text class="ql" x="12" y="${H / 2}" transform="rotate(-90 12 ${H / 2})" text-anchor="middle">資金流 →</text>
-      ${order.map((s) => `<g class="b" data-n="${esc(s.name)}" style="transform:translate(${X(hvVal(s))}px,${Y(hvFlow(s))}px);transition:transform .6s ease">
-        <circle r="${R(s).toFixed(1)}" style="fill:${fill(s)}" class="${s.name === HV.sel ? "sel" : ""}" stroke="rgba(255,255,255,.35)" stroke-width="1"/>
-        ${labeled.has(s.name) || s.name === HV.sel ? `<text y="${(-R(s) - 5).toFixed(1)}" text-anchor="middle">${esc(s.name)}</text>` : ""}</g>`).join("")}
-      </svg><div class="tip" id="hvTip"></div>`;
-    st.querySelectorAll("g.b").forEach((g) => {
-      g.onmousemove = (e) => hvTip(e, by[g.dataset.n]);
-      g.onmouseleave = () => { $("hvTip").style.display = "none"; };
-      g.onclick = () => hvSelect(g.dataset.n);
-    });
-  }
-  renderHVSide();
-}
-
-function hvSelect(name) {
-  HV.sel = name;
-  if (HV.view === "net") netDraw();
-  const st = $("hvStage");
-  st.querySelectorAll(".tile").forEach((t) => t.classList.toggle("sel", t.dataset.n === name));
-  st.querySelectorAll("g.b").forEach((g) => { g.querySelector("circle").classList.toggle("sel", g.dataset.n === name); if (g.dataset.n === name) g.parentNode.appendChild(g); });
-  renderHVSide();
-}
-
-function renderHVSide() {
-  const d = S.data[S.mkt], side = $("hvSide"); if (!d || !side) return;
-  const s = (d.sectors || []).find((x) => x.name === HV.sel); if (!s) { side.innerHTML = ""; return; }
-  const wk = s.wk || [], mx = Math.max(0.01, ...wk.filter(isNum).map(Math.abs));
-  const cos = d.stocks.filter((x) => x.sec === s.name && !x.etf).sort((a, b) => (b.tv || 0) - (a.tv || 0)).slice(0, 12);
-  const hasInd = d.industry && d.industry.rows.some((r) => r.name === s.name);
-  side.innerHTML = `<div class="card sm glow-p" style="margin:0">
-      <div class="tiny">選取的產業</div><div style="font-size:21px;font-weight:700;margin-bottom:8px">${esc(s.name)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="mt" style="padding:8px 10px"><div class="tiny">近4週相對強弱</div><div style="font-weight:700" class="${cls(s.rs4)}">${pct(s.rs4, 1)}</div></div>
-        <div class="mt" style="padding:8px 10px"><div class="tiny">${S.mkt === "tw" ? "法人5日買賣超" : "成交比重變化"}</div><div style="font-weight:700" class="${cls(hvFlow(s))}">${hvFlowTxt(hvFlow(s))}</div></div>
-        <div class="mt" style="padding:8px 10px"><div class="tiny">成交額比重</div><div style="font-weight:700">${pct0(s.share)}</div></div>
-        <div class="mt" style="padding:8px 10px"><div class="tiny">家數</div><div style="font-weight:700">${s.n}</div></div>
-        ${isNum(s.qfii) ? `<div class="mt" style="padding:8px 10px;grid-column:1/-1"><div class="tiny">外資持股比率（證交所，上市）</div><div style="font-weight:700">${s.qfii.toFixed(1)}%${isNum(s.qfii_chg) ? ` <span class="${cls(s.qfii_chg)}" style="font-size:var(--fs-xs)">近 ${Math.min(20, (s.qfii_days || 1) - 1)} 日 ${s.qfii_chg > 0 ? "+" : ""}${s.qfii_chg.toFixed(2)} 個百分點</span>` : ' <span class="tiny">（累積滿 5 天後顯示變化）</span>'}</div></div>` : ""}
-      </div>
-      <div class="tiny" style="margin-top:10px">近12週相對大盤（每週）</div>
-      <div class="wkbars">${wk.map((v, i) => { const h = isNum(v) ? Math.abs(v) / mx * 48 : 0;
-        return `<div title="${esc((d.weeks || [])[i] || "")} ${pct(v, 1)}" style="height:60px;position:relative;${i === HV.week ? "background:rgba(255,255,255,.08);" : ""}"><div style="position:absolute;left:1px;right:1px;${v > 0 ? "bottom:50%" : "top:50%"};height:${Math.max(2, h)}%;border-radius:2px;background:${isNum(v) ? `rgba(${v > 0 ? UPC : DNC},.85)` : "transparent"};box-shadow:0 0 8px rgba(${v > 0 ? UPC : DNC},.4)"></div></div>`; }).join("")}</div>
-    </div>
-    <div class="card sm" style="margin:0;flex:1;overflow:auto;max-height:300px">
-      <div class="ch" style="margin-bottom:4px"><b>成分股</b><span class="tiny">依成交額，點一下看詳情</span></div>
-      <table><tbody>${cos.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${S.mkt}"><td>${esc(x.c)} <span class="muted">${esc(x.n)}</span></td><td class="num ${cls(x.r1m)}">${pct(x.r1m, 1)}</td><td>${finPill(x.fin)}</td></tr>`).join("") || `<tr><td class="empty">沒有成分股資料</td></tr>`}</tbody></table>
-    </div>
-    ${hasInd ? `<button class="btn pri" id="hvToInd">看「${esc(s.name)}」產業財報 →</button>` : ""}`;
-  bindRows(side);
-  const b = $("hvToInd"); if (b) b.onclick = () => { S.iSec = s.name; setTab("p3"); window.scrollTo({ top: 0, behavior: "smooth" }); };
-}
-
-// ── 關係網路（力導向圖，canvas 繪製） ──
-// 大節點＝族群（大小＝成交額比重），小節點＝成分股（每族群取成交額前 30 檔，大小＝成交額）
-// 族群之間的連線＝近12週相對強弱的相關係數 > 0.5（同步輪動）
-function oklchHex(L, C, h) {
-  const hr = h * Math.PI / 180, a_ = C * Math.cos(hr), b_ = C * Math.sin(hr);
-  const l = (L + 0.3963377774 * a_ + 0.2158037573 * b_) ** 3, m = (L - 0.1055613458 * a_ - 0.0638541728 * b_) ** 3, s_ = (L - 0.0894841775 * a_ - 1.291485548 * b_) ** 3;
-  const lin = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s_, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s_, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s_];
-  return "#" + lin.map((v) => { v = Math.max(0, Math.min(1, v)); v = v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055; return Math.round(v * 255).toString(16).padStart(2, "0"); }).join("");
-}
-// 色相交錯排列，相鄰族群顏色差異大
-const PAL = [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15].map((i) => oklchHex(0.78, 0.12, 20 + i * 22.5));
-const PLATE = { hi: "#F2D64B", ink: "#F3E9F7", dim: "rgba(243,233,247,.66)", bg: "#1B0C24" };
-const NET = { sim: null, nodes: [], links: [], tr: null, hover: null, color: "mono", canvas: null, W: 0, H: 0, base: 0, adj: null };
-
-function corr(a, b) {
-  const p = []; for (let i = 0; i < Math.min(a.length, b.length); i++) if (isNum(a[i]) && isNum(b[i])) p.push([a[i], b[i]]);
-  if (p.length < 8) return null;
-  const ma = p.reduce((s, x) => s + x[0], 0) / p.length, mb = p.reduce((s, x) => s + x[1], 0) / p.length;
-  let sab = 0, saa = 0, sbb = 0; p.forEach(([x, y]) => { sab += (x - ma) * (y - mb); saa += (x - ma) ** 2; sbb += (y - mb) ** 2; });
-  return saa && sbb ? sab / Math.sqrt(saa * sbb) : null;
-}
-function heatRGBA(v, mx, a0 = 0.35) { if (!isNum(v)) return "rgba(160,160,190,.55)"; const a = Math.min(1, Math.abs(v) / mx) * (1 - a0) + a0; return `rgba(${v > 0 ? UPC : DNC},${a.toFixed(2)})`; }
-function netColor(n) {
-  if (NET.color === "mono") return n.hub ? PLATE.hi : "rgba(242,214,75,.88)";
-  return n.hub ? heatRGBA(hvVal(n.s), hvMax(), 0.45) : heatRGBA(isNum(n.x0.r1m) ? n.x0.r1m - NET.base : null, 0.15);
-}
-
-function netBuild() {
-  const d = S.data[S.mkt], secs = hvSectors();
-  const stocks = d.stocks.filter((x) => !x.etf && x.sec && isNum(x.tv) && x.tv > 0);
-  const r1 = stocks.map((x) => x.r1m).filter(isNum).sort((a, b) => a - b);
-  NET.base = r1.length ? r1[Math.floor(r1.length / 2)] : 0;
-  const by = {}; stocks.forEach((x) => (by[x.sec] = by[x.sec] || []).push(x));
-  const W = NET.W, H = NET.H, nodes = [], links = [];
-  const smax = Math.max(...secs.map((s) => s.share)), tvmax = Math.max(...stocks.map((x) => x.tv));
-  const order = secs.slice().sort((a, b) => b.share - a.share);
-  order.forEach((s, i) => {
-    const ang = i / order.length * Math.PI * 2, rad = Math.min(W, H) * (0.18 + 0.22 * (i % 3) / 2);
-    const hub = { id: "S:" + s.name, hub: true, s, name: s.name, ci: i, r: 16 + Math.sqrt(s.share / smax) * 40, x: W / 2 + Math.cos(ang) * rad, y: H / 2 + Math.sin(ang) * rad };
-    nodes.push(hub);
-    (by[s.name] || []).sort((a, b) => b.tv - a.tv).slice(0, 30).forEach((x, j) => {
-      nodes.push({ id: "C:" + x.c, x0: x, name: x.n, code: x.c, ci: i, sec: s.name, lab: j < 3, r: 2.2 + Math.sqrt(x.tv / tvmax) * 10, x: hub.x + (Math.random() - 0.5) * 60, y: hub.y + (Math.random() - 0.5) * 60 });
-      links.push({ source: "C:" + x.c, target: "S:" + s.name, kind: "m" });
-    });
-  });
-  // 只留相關係數 > 0.7 的配對，每個族群最多 3 條，避免畫面太亂
-  const pairs = [];
-  for (let i = 0; i < order.length; i++) for (let j = i + 1; j < order.length; j++) {
-    const c = corr(order[i].wk || [], order[j].wk || []);
-    if (c != null && c > 0.7) pairs.push([i, j, c]);
-  }
-  pairs.sort((a, b) => b[2] - a[2]);
-  const deg = new Array(order.length).fill(0);
-  for (const [i, j, c] of pairs) { if (deg[i] >= 3 || deg[j] >= 3) continue; deg[i]++; deg[j]++;
-    links.push({ source: "S:" + order[i].name, target: "S:" + order[j].name, kind: "c", w: c }); }
-  NET.nodes = nodes; NET.links = links;
-  NET.adj = new Map(nodes.map((n) => [n.id, new Set([n.id])]));
-  links.forEach((l) => { NET.adj.get(l.source).add(l.target); NET.adj.get(l.target).add(l.source); });
-}
-
-function netInit(st) {
-  if (NET.sim) NET.sim.stop();
-  const W = st.clientWidth || 800, H = st.clientHeight || 560; NET.W = W; NET.H = H;
-  st.innerHTML = `<canvas id="netCv" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
-    <div class="netctl glass"><button data-z="in" title="放大" aria-label="放大">＋</button><input type="range" id="netZ" aria-label="縮放比例" min="0.3" max="6" step="0.05" value="1" orient="vertical"><button data-z="out" title="縮小" aria-label="縮小">－</button><button data-z="reset" title="重新置中" aria-label="重新置中">⟲</button></div>
-    <div class="netcol"><div class="seg sm" id="netCol"><button data-c="mono"${NET.color === "mono" ? ' class="on"' : ""}>單色</button><button data-c="heat"${NET.color === "heat" ? ' class="on"' : ""}>強弱色</button></div></div>
-    <div class="tip" id="hvTip"></div>`;
-  const cv = $("netCv"), dpr = window.devicePixelRatio || 1;
-  cv.width = W * dpr; cv.height = H * dpr; NET.canvas = cv;
-  netBuild();
-  NET.tr = d3.zoomIdentity;
-  NET.sim = d3.forceSimulation(NET.nodes)
-    .force("link", d3.forceLink(NET.links).id((n) => n.id).distance((l) => l.kind === "c" ? 260 : 34 + l.target.r * 1.15).strength((l) => l.kind === "c" ? 0.04 * l.w : 0.8))
-    .force("charge", d3.forceManyBody().strength((n) => n.hub ? -950 : -22).distanceMax(600).theta(0.9))
-    .force("collide", d3.forceCollide((n) => n.r + 1.4).iterations(1))
-    .force("x", d3.forceX(W / 2).strength(0.018 * Math.min(1.6, H / W * 1.6))).force("y", d3.forceY(H / 2).strength(0.06))
-    .alphaDecay(0.028).on("tick", () => { NET.ticks = (NET.ticks || 0) + 1; if (NET.ticks === 90) netFit(false); netDraw(); }).on("end", () => netFit(true));
-  NET.ticks = 0;
-  const hit = (ev) => {
-    const [px, py] = d3.pointer(ev, cv), [x, y] = NET.tr.invert([px, py]);
-    let best = null, bd = Infinity;
-    for (const n of NET.nodes) { const dd = Math.hypot(n.x - x, n.y - y); if (dd < n.r + 4 / NET.tr.k && (n.hub ? dd - 1000 : dd) < bd) { bd = n.hub ? dd - 1000 : dd; best = n; } }
-    return best;
-  };
-  const zoom = d3.zoom().scaleExtent([0.2, 6]).on("zoom", (e) => { NET.tr = e.transform; $("netZ").value = e.transform.k; netDraw(); });
-  const sel = d3.select(cv);
-  sel.call(d3.drag().container(cv).subject((ev) => { const n = hit(ev.sourceEvent); if (!n) return null; const [x, y] = NET.tr.invert(d3.pointer(ev.sourceEvent, cv)); n._dx = n.x - x; n._dy = n.y - y; return n; })
-    .on("start", (ev) => { if (!ev.active) NET.sim.alphaTarget(0.25).restart(); ev.subject.fx = ev.subject.x; ev.subject.fy = ev.subject.y; cv.style.cursor = "grabbing"; })
-    .on("drag", (ev) => { const [x, y] = NET.tr.invert(d3.pointer(ev.sourceEvent, cv)); ev.subject.fx = x + ev.subject._dx; ev.subject.fy = y + ev.subject._dy; })
-    .on("end", (ev) => { if (!ev.active) NET.sim.alphaTarget(0); ev.subject.fx = null; ev.subject.fy = null; cv.style.cursor = "grab"; }))
-    .call(zoom).on("dblclick.zoom", null);
-  cv.addEventListener("mousemove", (e) => {
-    const n = hit(e); if (n !== NET.hover) { NET.hover = n; netDraw(); }
-    const tip = $("hvTip");
-    if (!n) { tip.style.display = "none"; cv.style.cursor = "grab"; return; }
-    cv.style.cursor = "pointer";
-    if (n.hub) hvTip(e, n.s);
-    else { const x = n.x0; tip.innerHTML = `<b>${esc(x.c)} ${esc(x.n)}</b><div class="tiny">${esc(n.sec)}</div><div>近1月 <span class="${cls(x.r1m)}">${pct(x.r1m, 1)}</span></div><div>財報 ${finPill(x.fin)}</div><div class="tiny">點一下看詳情</div>`;
-      const r = st.getBoundingClientRect(); let tx = e.clientX - r.left + 14, ty = e.clientY - r.top + 12; if (tx > r.width - 190) tx -= 200; if (ty > r.height - 110) ty -= 120; tip.style.left = tx + "px"; tip.style.top = ty + "px"; tip.style.display = "block"; }
-  });
-  cv.addEventListener("mouseleave", () => { NET.hover = null; $("hvTip").style.display = "none"; netDraw(); });
-  cv.addEventListener("click", (e) => { const n = hit(e); if (!n) return; if (n.hub) hvSelect(n.name); else openDetail(S.mkt, n.code); });
-  st.querySelectorAll(".netctl button").forEach((b) => b.onclick = () => {
-    const z = b.dataset.z, t = d3.select(cv).transition().duration(350);
-    if (z === "in") zoom.scaleBy(t, 1.4); else if (z === "out") zoom.scaleBy(t, 1 / 1.4); else netFit(true, true);
-  });
-  NET.zoom = zoom; NET.userZoomed = false;
-  // 先在背景算好大致位置再畫，一打開就是置中、不會飛出畫面
-  NET.sim.stop(); NET.sim.tick(160); NET.ticks = 200;
-  if (RM) { NET.sim.tick(240); netFit(false); netDraw(); } else { netFit(false); NET.sim.alpha(0.12).restart(); }
-  cv.addEventListener("wheel", () => { NET.userZoomed = true; }, { passive: true });
-  cv.addEventListener("pointerdown", () => { NET.userZoomed = true; });
-  $("netZ").oninput = () => zoom.scaleTo(d3.select(cv), Number($("netZ").value));
-  st.querySelectorAll("#netCol button").forEach((b) => b.onclick = () => { NET.color = b.dataset.c; st.querySelectorAll("#netCol button").forEach((x) => x.classList.toggle("on", x === b)); netDraw(); hvFoot(); });
-}
-
-// 依目前節點範圍自動縮放置中；使用者自己縮放或拖曳過就不再自動調整（按 ⟲ 會重新置中）
-function netFit(anim, force) {
-  if (!NET.canvas || !NET.zoom || (NET.userZoomed && !force)) return;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const n of NET.nodes) { x0 = Math.min(x0, n.x - n.r); y0 = Math.min(y0, n.y - n.r); x1 = Math.max(x1, n.x + n.r); y1 = Math.max(y1, n.y + n.r); }
-  const pad = 40, k = Math.min(3, (NET.W - pad * 2) / (x1 - x0), (NET.H - pad * 2) / (y1 - y0));
-  const t = d3.zoomIdentity.translate(NET.W / 2 - k * (x0 + x1) / 2, NET.H / 2 - k * (y0 + y1) / 2).scale(k);
-  const sel = d3.select(NET.canvas);
-  if (anim) NET.zoom.transform(sel.transition().duration(600), t); else NET.zoom.transform(sel, t);
-  if (force) NET.userZoomed = false;
-}
-
-function netDraw() {
-  const cv = NET.canvas; if (!cv || !cv.getContext) return;
-  const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, t = NET.tr, k = t.k, sk = Math.sqrt(k);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, NET.W, NET.H);
-  ctx.translate(t.x, t.y); ctx.scale(k, k);
-  const focus = NET.hover ? NET.adj.get(NET.hover.id) : null;
-  const selHub = HV.sel ? "S:" + HV.sel : null;
-  const lit = (n) => !focus || focus.has(n.id);
-  ctx.lineCap = "round";
-  // 連線：全部是點線；族群之間的同步輪動線比較粗、間距比較大
-  for (const l of NET.links) {
-    const a = l.source, b = l.target; if (!a.x) continue;
-    const on = !focus || (focus.has(a.id) && focus.has(b.id) && (a === NET.hover || b === NET.hover));
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-    if (l.kind === "c") {
-      ctx.strokeStyle = on ? (focus ? "rgba(243,233,247,.85)" : `rgba(243,233,247,${(0.26 + 0.3 * Math.max(0, l.w - 0.7) / 0.3).toFixed(2)})`) : "rgba(243,233,247,.04)";
-      ctx.lineWidth = (focus && on ? 1.6 : 1.1) / sk; ctx.setLineDash([0.1, 4 / sk]);
-    } else {
-      ctx.strokeStyle = on ? (focus ? "rgba(243,233,247,.6)" : b.id === selHub ? "rgba(243,233,247,.42)" : "rgba(243,233,247,.18)") : "rgba(243,233,247,.03)";
-      ctx.lineWidth = 0.8 / sk; ctx.setLineDash([0.1, 2.6 / sk]);
-    }
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-  const leaves = NET.nodes.filter((n) => !n.hub), hubs = NET.nodes.filter((n) => n.hub);
-  for (const n of leaves) {
-    ctx.globalAlpha = lit(n) ? 1 : 0.14;
-    ctx.beginPath(); ctx.arc(n.x, n.y, Math.max(1.6, n.r * 0.8), 0, Math.PI * 2); ctx.fillStyle = netColor(n); ctx.fill();
-    if (n === NET.hover) { ctx.lineWidth = 1.5 / k; ctx.strokeStyle = PLATE.ink; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 3 / k, 0, Math.PI * 2); ctx.stroke(); }
-  }
-  for (const n of hubs) {
-    ctx.globalAlpha = lit(n) ? 1 : 0.2;
-    ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fillStyle = netColor(n); ctx.fill();
-    if (n.id === selHub || n === NET.hover) { ctx.lineWidth = 1.5 / k; ctx.strokeStyle = PLATE.ink; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4 / k, 0, Math.PI * 2); ctx.stroke(); }
-  }
-  // 文字：寫在點的右邊，底色描邊讓字從點線上浮出來
-  ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
-  const label = (n, txt, fs, w, col) => {
-    ctx.font = `${w} ${fs}px "Noto Sans TC", sans-serif`;
-    const x = n.x + n.r + 4 / k;
-    ctx.lineWidth = 3.2 / k; ctx.strokeStyle = "rgba(27,12,36,.92)"; ctx.strokeText(txt, x, n.y);
-    ctx.fillStyle = col; ctx.fillText(txt, x, n.y);
-  };
-  const boxes = [];
-  const boxOf = (n, txt, fs, w) => { ctx.font = `${w} ${fs}px "Noto Sans TC", sans-serif`; const x = n.x + n.r + 4 / k, tw = ctx.measureText(txt).width, p = 2 / k; return [x - p, n.y - fs * 0.6 - p, x + tw + p, n.y + fs * 0.6 + p]; };
-  const hit = (b) => boxes.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
-  const hubTxt = (n) => n.name.replace(/業$/, "");
-  hubs.forEach((n) => boxes.push(boxOf(n, hubTxt(n), 12.5 / k, 700)));
-  // 族群圓圈本身也算障礙物，避免個股名字蓋在大圓上
-  hubs.forEach((n) => boxes.push([n.x - n.r, n.y - n.r, n.x + n.r, n.y + n.r]));
-  const forced = (n) => focus && focus.has(n.id) && NET.hover && (NET.hover === n || NET.hover.hub);
-  const cand = leaves.filter((n) => n.lab || k > 2 || forced(n)).sort((a, b) => (forced(b) - forced(a)) || (b.r - a.r));
-  for (const n of cand) {
-    const b = boxOf(n, n.name, 10 / k, 400);
-    if (!forced(n) && hit(b)) continue;
-    boxes.push(b);
-    ctx.globalAlpha = lit(n) ? 1 : 0.18;
-    label(n, n.name, 10 / k, 400, PLATE.dim);
-  }
-  for (const n of hubs) {
-    ctx.globalAlpha = lit(n) ? 1 : 0.3;
-    label(n, hubTxt(n), 12.5 / k, 700, PLATE.ink);
-  }
-  ctx.globalAlpha = 1;
-}
-function hexA(c, a) {
-  if (c.startsWith("rgba")) return c.replace(/,[\d.]+\)$/, `,${a})`);
-  const h = c.replace("#", ""); const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${a})`;
+// 相對輪動（RRG）：每個產業一顆點，拖著過去 5 週的軌跡
+function drawHV() {
+  const st = $("hvStage"), d = S.data[S.mkt]; if (!st || !d) return;
+  const weeks = d.weeks || [], end = HV.week < 0 ? weeks.length - 1 : HV.week, TAIL = 5;
+  const L = $("hvWkL"); if (L) L.textContent = weeks.length ? `${weeks[end]} 那週${end === weeks.length - 1 ? "（本週到目前）" : ""}` : "";
+  const r = $("hvWk"); if (r) r.value = end;
+  const W = st.clientWidth || 520, H = Math.round(Math.min(420, Math.max(300, W * 0.7))), pad = 30;
+  const secs = hvSectors(), hasTrail = secs.some((s) => (s.trail || []).some(Boolean));
+  const pts = secs.map((s) => ({ s, p: hasTrail ? (s.trail || []).slice(Math.max(0, end - TAIL), end + 1).filter(Boolean) : isNum(s.rs4) && isNum(s.share_chg) ? [[s.rs4, s.share_chg, s.share]] : [] })).filter((o) => o.p.length);
+  const allP = hasTrail ? secs.flatMap((s) => (s.trail || []).filter(Boolean)) : pts.map((o) => o.p[0]);
+  const q = (f) => { const v = allP.map(f).filter(isNum).map(Math.abs).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) * 0.97)] : 0.01; };
+  const xm = Math.max(0.01, q((v) => v[0])) * 1.15, ym = Math.max(0.0005, q((v) => v[1])) * 1.15, cl = (v, m) => Math.max(-m, Math.min(m, v));
+  const X = (v) => pad + (cl(v, xm) + xm) / (2 * xm) * (W - 2 * pad), Y = (v) => H - pad - (cl(v, ym) + ym) / (2 * ym) * (H - 2 * pad);
+  const smax = Math.max(0.01, ...pts.map((o) => o.p[o.p.length - 1][2] || 0)), R = (sh) => 3 + Math.sqrt((sh || 0) / smax) * 10;
+  const col = (v) => v[0] > 0 && v[1] > 0 ? `rgb(${UPC})` : v[0] < 0 && v[1] < 0 ? `rgb(${DNC})` : "rgba(200,194,224,.75)";
+  const order = pts.slice().sort((a, b) => (b.p[b.p.length - 1][2] || 0) - (a.p[a.p.length - 1][2] || 0)), lab = new Set(order.slice(0, 9).map((o) => o.s.name));
+  st.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="產業相對輪動圖">
+    <line x1="${pad}" x2="${W - pad}" y1="${Y(0)}" y2="${Y(0)}" class="ax"/><line y1="${pad}" y2="${H - pad}" x1="${X(0)}" x2="${X(0)}" class="ax"/>
+    <text class="q" x="${W - pad}" y="${pad - 10}" text-anchor="end">領先：強，比重增加</text><text class="q" x="${pad}" y="${pad - 10}">改善：比重先增加</text>
+    <text class="q" x="${W - pad}" y="${H - 8}" text-anchor="end">轉弱：強，比重減少</text><text class="q" x="${pad}" y="${H - 8}">落後：弱，比重減少</text>
+    ${pts.map(({ s, p }) => { const h = p[p.length - 1], sel = s.name === FL.sel;
+      return `<g class="pt${sel ? " sel" : ""}" data-sec="${esc(s.name)}">${p.length > 1 ? `<polyline points="${p.map((v) => `${X(v[0]).toFixed(1)},${Y(v[1]).toFixed(1)}`).join(" ")}" class="tl"/>` : ""}
+        <circle cx="${X(h[0]).toFixed(1)}" cy="${Y(h[1]).toFixed(1)}" r="${R(h[2]).toFixed(1)}" fill="${col(h)}"/>${lab.has(s.name) || sel ? `<text x="${(X(h[0]) + R(h[2]) + 4).toFixed(1)}" y="${(Y(h[1]) + 4).toFixed(1)}">${esc(s.name)}</text>` : ""}
+        <title>${esc(s.name)}：強弱 ${flSign(h[0])} ${Math.abs(h[0] * 100).toFixed(1)}%，比重變化 ${flSign(h[1])} ${Math.abs(h[1] * 100).toFixed(2)} 個百分點</title></g>`; }).join("")}
+  </svg>${hasTrail ? "" : `<p class="fl-dim fl-small">軌跡資料在下次每日更新後才會出現；目前只畫最新位置。</p>`}`;
+  st.querySelectorAll("[data-sec]").forEach((g) => g.onclick = () => flSelect(g.dataset.sec));
 }
 
 let hvRz = null;
-window.addEventListener("resize", () => { clearTimeout(hvRz); hvRz = setTimeout(() => { if (S.tab === "p2") drawHV(true); }, 200); });
+window.addEventListener("resize", () => { clearTimeout(hvRz); hvRz = setTimeout(() => { if (S.tab === "p2") renderHV(); }, 200); });
 
 if (window.Chart && Chart.defaults) { Chart.defaults.color = tickC(); Chart.defaults.borderColor = gridC(); Chart.defaults.font.family = getComputedStyle(document.body).fontFamily; }
 function sessionOpen(tz, o, c) {
