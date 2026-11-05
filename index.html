@@ -341,6 +341,7 @@ h1,h2,.ed-title{text-wrap:balance}
 
 <!-- ① 總覽 -->
 <section class="page on" id="p1">
+  <div class="grid2"><div class="card" id="cardAssist"></div><div class="card" id="cardBrief"></div></div>
   <div class="card" id="cardPicks"></div>
   <p class="intro">戰術層：現在處在債務週期哪裡、市場偏冒險還是避險、戰術層要不要轉保守。</p>
   <div class="grid3" id="macroTop"></div>
@@ -609,6 +610,8 @@ function render() {
     if (S.tab === "p2") renderHV();
   }
   renderAlerts();
+  renderAssist();
+  renderBrief();
   renderPicks();
   const pc = S.data.tw && S.data.tw.px_check;
   $("pxCheck").innerHTML = pc ? `台股價格已用證交所／櫃買中心官方收盤核對：${pc.ok.toLocaleString()} 檔一致${pc.filled ? `、${pc.filled} 檔 Yahoo 缺最新一天已補上` : ""}${pc.mismatch ? `、<b>${pc.mismatch} 檔不符（已標示「價格待確認」）</b>` : ""}。<br>` : "";
@@ -762,6 +765,117 @@ function renderBench(d) {
     ${b.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${S.mkt}">${starTd(S.mkt, x.c)}<td>${esc(x.n)} <span class="tiny">${esc(x.c)}</span>${x.pi ? '<div class="tiny">價格指數，不含息</div>' : ""}</td><td class="num ${cls(x.b)}">${pct(x.b, 0)}</td><td class="num">${isNum(x.k) ? Math.round(x.k) : "－"}</td><td class="num">${pct(x.dd, 0)}</td><td class="num">${pct0(x.pos)}</td><td class="num">${isNum(x.pe) ? x.pe.toFixed(1) : "－"}</td><td class="nm">${lightPill(x.l)}${chgMark(S.mkt, x.c, x.l)}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">沒有資料</div>`;
   bindRows($("benchBody"));
+}
+
+// ═════════════ ① 總覽：本週助手（依使用者規則整理該做的事，不是買賣建議） ═════════════
+function renderAssist() {
+  const items = []; // [狀態 ok|mid|bad|none, 標題, 說明, 依據的規則]
+  const C = S.core, M = S.macro || {}, tc = M.tactical || {};
+  // 1. 核心層定投＋再平衡
+  if (C && C.latest) {
+    const k = coreCalc(C);
+    const top = k.A.filter((s) => k.buy[s] >= 1).sort((a, b) => k.buy[b] - k.buy[a]).slice(0, 3)
+      .map((s) => `${esc(s.replace(".TW", ""))} ${ntd(k.buy[s])}`).join("、");
+    items.push(["ok", "本月定投 " + ntd(k.amt), (k.tot > 0 ? "優先補足低於目標的資產：" : "還沒輸入核心層持有股數，先照目標比例分配：") + (top || "－"),
+      "核心層：每月定投，不因新聞或情緒擇時"]);
+    items.push(!isNum(k.drift) ? ["none", "再平衡：下次檢查 " + nextQuarterEnd(), "到⑤核心配置輸入持有股數後，才算得出偏離", "每季檢查，偏離 5 個百分點就拉回"]
+      : k.drift > k.th ? ["bad", "季底要再平衡（" + nextQuarterEnd() + "）", `最大偏離 ${(k.drift * 100).toFixed(1)} 個百分點，超過門檻 ${k.th * 100}`, "每季檢查，偏離 5 個百分點就拉回"]
+      : ["ok", "不需要再平衡", `最大偏離 ${(k.drift * 100).toFixed(1)} 個百分點，門檻 ${k.th * 100}；下次檢查 ${nextQuarterEnd()}`, "每季檢查，偏離 5 個百分點就拉回"]);
+  } else items.push(["none", "核心層", "核心配置資料還沒產生", ""]);
+  // 2. 戰術層
+  if (tc.markets) {
+    const on = Object.values(tc.markets).filter((m) => m.on);
+    items.push(on.length ? ["bad", "戰術層已觸發", on.map((m) => `${esc(m.name)}：核心層股票減 ${m.step} 個百分點，移到 IEF`).join("；"), "總經＋財報＋資金流三者都轉弱才動，只做防守"]
+      : ["ok", "戰術層：維持目標比例", `總經${tc.macro_on ? "已轉弱" : "未轉弱"}、` + Object.values(tc.markets).map((m) => `${esc(m.name)}財報${m.fin ? "轉弱" : "正常"}／資金流${m.flow ? "轉弱" : "正常"}`).join("、") + "；三者沒有同時轉弱", "總經＋財報＋資金流三者都轉弱才動，只做防守"]);
+  }
+  // 3. 衛星層候選
+  const pk = ["tw", "us"].map((m) => [m, pickRows(m)]).filter(([, r]) => r);
+  if (pk.length) {
+    const n = pk.reduce((a, [, r]) => a + r.length, 0);
+    items.push([n ? "mid" : "none", `衛星層：${n} 檔四道濾網全過`, pk.map(([m, r]) => `${m === "tw" ? "台股" : "美股"} ${r.length} 檔${r.length ? "（" + r.slice(0, 3).map((x) => esc(x.n)).join("、") + (r.length > 3 ? "…" : "") + "）" : ""}`).join("；") + "。名單在下方，進場前先寫進決策日誌",
+      "前三道通過＋長線買點觸發才分批進場；單股不超過衛星層 10%"]);
+  }
+  // 4. 持股檢討、單股上限
+  const hk = Object.keys(HOLD);
+  if (hk.length) {
+    const rows = hk.map((key) => { const [m, ...r] = key.split(":"); const c = r.join(":"); const x = findItem(m, c); return { c, x, v: x ? holdValueTWD(m, x, HOLD[key]) : null }; });
+    const satTot = rows.reduce((a, r) => a + (isNum(r.v) ? r.v : 0), 0);
+    const review = rows.filter(({ x }) => x && (x.fin === "down" || (isNum(x.q) && x.q < 35)) && isNum(x.wma) && x.wma < 0);
+    const over = rows.filter((r) => isNum(r.v) && satTot > 0 && r.v / satTot > 0.10);
+    items.push(review.length ? ["bad", `持股檢討：${review.length} 檔要檢討`, review.map((r) => esc(r.c + " " + r.x.n)).join("、") + "：財報轉壞且跌破週線 MA52", "賣出只在財報轉壞＋跌破長期均線同時成立時檢討"]
+      : ["ok", "持股檢討：沒有要賣的", `${rows.length} 檔持股都沒有同時出現財報轉壞＋跌破週線 MA52`, "賣出只在財報轉壞＋跌破長期均線同時成立時檢討"]);
+    if (over.length) items.push(["bad", `單股上限：${over.length} 檔超過`, over.map((r) => `${esc(r.c)} 佔衛星層 ${(r.v / satTot * 100).toFixed(1)}%`).join("、"), "單股不超過衛星層 10%"]);
+  } else items.push(["none", "持股檢討", "還沒輸入衛星層持股（點任一檔股票即可加入）", "賣出只在財報轉壞＋跌破長期均線同時成立時檢討"]);
+  // 5. 加密貨幣
+  if (C && C.latest && Number(CORE.crypto) > 0) {
+    const k = coreCalc(C), sat = hk.reduce((a, key) => { const [m, ...r] = key.split(":"); const x = findItem(m, r.join(":")); const v = x ? holdValueTWD(m, x, HOLD[key]) : null; return a + (isNum(v) ? v : 0); }, 0);
+    const cry = Number(CORE.crypto), share = cry / (k.tot + sat + (Number(CORE.tactical) || 0) + cry);
+    if (share > 0.05) items.push(["bad", "加密貨幣超過 5%", `佔總資產 ${(share * 100).toFixed(1)}%`, "加密貨幣合約：總資產 5% 以內"]);
+  }
+  // 6. 決策日誌、資料缺口
+  const last = LOG.length ? LOG[0].d : null, days = last ? Math.floor((Date.now() - new Date(last)) / 864e5) : null;
+  items.push(!last ? ["mid", "決策日誌還是空的", "任何進出場、改規則都要記錄日期、動作、理由（⑤核心配置最下方）", "痛苦＋反思＝進步"]
+    : days > 30 ? ["mid", `決策日誌 ${days} 天沒更新`, `上一筆是 ${esc(last)}；這段期間有任何動作都要補記`, "痛苦＋反思＝進步"]
+    : ["ok", "決策日誌", `最近一筆 ${esc(last)}`, "痛苦＋反思＝進步"]);
+  if (S.macro && !(S.macro.series || {}).hy) items.push(["mid", "資料缺口：高收益債信用利差", "FRED 連不上，「衰退」判斷和戰術層的利差條件不會觸發。到 GitHub Settings → Secrets 加 FRED_API_KEY 可以補上", ""]);
+  const order = { bad: 0, mid: 1, ok: 2, none: 3 };
+  items.sort((a, b) => order[a[0]] - order[b[0]]);
+  const lab = { bad: "要處理", mid: "留意", ok: "照常", none: "缺資料" };
+  $("cardAssist").innerHTML = `<div class="ch"><b>本週助手</b><span class="tiny">依你寫好的規則，整理這週該做的事</span></div>
+    <table><tbody>${items.map(([s, t, d, r]) => `<tr><td style="width:64px"><span class="pill ${s}">${lab[s]}</span></td><td><b>${t}</b><div class="tiny">${d}</div>${r ? `<div class="tiny" style="opacity:.7">規則：${esc(r)}</div>` : ""}</td></tr>`).join("")}</tbody></table>
+    <p class="tiny" style="margin:8px 0 0">這裡只檢查你的規則有沒有被觸發，不判斷該買什麼、也不預測漲跌；最後決定由你做。</p>`;
+}
+
+// ═════════════ ① 總覽：總經概況分析（全部由 data/macro.json 和市場資料算出，沒有人工判斷） ═════════════
+// 門檻是 AI 暫定值（2026-11-05），不是使用者決定的參數：
+const BRIEF = {
+  growth: 0.02,   // 成長方向：景氣循環股減防禦股近 12 週報酬差 ≥ +2% 偏強、≤ −2% 偏弱
+  infl: 0.15,     // 通膨方向：10 年期預期通膨 3 個月變化 ≥ +0.15 上升、≤ −0.15 下降（百分點）
+  usd: 0.02,      // 美元 3 個月漲跌超過 2% 才算明顯
+};
+function renderBrief() {
+  const M = S.macro;
+  if (!M) { $("cardBrief").innerHTML = `<div class="ch"><b>總經概況分析</b></div><div class="empty">總經資料還沒產生</div>`; return; }
+  const ser = M.series || {}, st = M.stage || {}, rk = M.risk || {};
+  const chgPct = (x) => x && isNum(x.chg13) && isNum(x.last) && x.last - x.chg13 !== 0 ? x.chg13 / (x.last - x.chg13) : null;
+  // 四象限
+  const g = isNum(rk.r60) ? (rk.r60 >= BRIEF.growth ? 1 : rk.r60 <= -BRIEF.growth ? -1 : 0) : null;
+  const ic = ser.infl && isNum(ser.infl.chg13) ? ser.infl.chg13 : null;
+  const inf = isNum(ic) ? (ic >= BRIEF.infl ? 1 : ic <= -BRIEF.infl ? -1 : 0) : null;
+  const dir = (v, up, dn) => v === 1 ? up : v === -1 ? dn : v === 0 ? "不明顯" : "沒有資料";
+  const WIN = { g1: "股票、商品", g0: "名目公債", i1: "商品、黃金、抗通膨債", i0: "股票、名目公債" };
+  const tail = [g === 1 ? WIN.g1 : g === -1 ? WIN.g0 : null, inf === 1 ? WIN.i1 : inf === -1 ? WIN.i0 : null].filter(Boolean);
+  // 正反兩面
+  const bull = [], bear = [];
+  const c = ser.curve, real = ser.real, usd = ser.usd;
+  if (c && isNum(c.last)) (c.last > 0 ? bull : bear).push(`殖利率曲線 ${c.last > 0 ? "正斜率" : "倒掛"}（10Y−2Y ${num(c.last, 2)}%）`);
+  if (isNum(st.idx)) (st.idx === 0 ? bull : bear).push(`債務週期判斷為「${esc(st.name)}」${st.idx >= 1 ? "，景氣後段的風險較高" : ""}`);
+  if (rk.label === "偏冒險") bull.push(`資金偏冒險（景氣循環股近 4 週領先防禦股 ${pct(rk.r20, 1)}）`);
+  if (rk.label === "偏避險") bear.push(`資金偏避險（景氣循環股近 4 週落後防禦股 ${pct(rk.r20, 1)}）`);
+  if (real && isNum(real.chg13)) (real.chg13 < 0 ? bull : bear).push(`10 年期實質利率 ${num(real.last, 2)}%，3 個月${real.chg13 < 0 ? "下降" : "上升"} ${num(Math.abs(real.chg13), 2)}（${real.chg13 < 0 ? "資金變鬆" : "資金變緊"}）`);
+  const uc = chgPct(usd);
+  if (isNum(uc) && Math.abs(uc) >= BRIEF.usd) (uc < 0 ? bull : bear).push(`美元 3 個月${uc > 0 ? "走強" : "走弱"} ${pct(Math.abs(uc), 1)}（美元走強時，全球資金通常較緊）`);
+  (M.idx || []).forEach((x) => (x.below ? bear : bull).push(`${esc(x.n)}${x.below ? "跌破" : "站上"}週線 MA52（${pct(x.gap, 1)}）`));
+  ["tw", "us"].forEach((m) => {
+    const d = S.data[m]; if (!d) return;
+    const rows = ((d.industry || {}).rows || []).filter((r) => isNum(r.rev_yoy));
+    if (rows.length) { const sh = rows.filter((r) => r.rev_yoy > 0).length / rows.length; (sh >= 0.6 ? bull : sh < 0.5 ? bear : []).push(`${m === "tw" ? "台股" : "美股"} ${Math.round(sh * 100)}% 的產業營收在成長`); }
+    const b = (d.benchmarks || [])[0];
+    if (b && b.l === "exp") bear.push(`${esc(b.n)} 長線燈號偏貴（年線乖離 ${pct(b.b, 0)}）`);
+    if (b && b.l === "cheap") bull.push(`${esc(b.n)} 長線燈號便宜（年線乖離 ${pct(b.b, 0)}）`);
+  });
+  const unknown = ser.hy ? "" : "高收益債信用利差沒有資料，信用市場的壓力看不到，這是未知的風險，沒有算進上面兩邊。";
+  const tc = M.tactical || {};
+  const li = (a, empty) => a.length ? `<ul style="margin:4px 0 0;padding-left:18px">${a.map((x) => `<li class="tiny">${x}</li>`).join("")}</ul>` : `<div class="tiny">${empty}</div>`;
+  $("cardBrief").innerHTML = `<div class="ch"><b>總經概況分析</b><span class="tiny">更新於 ${esc(M.updated || "－")}</span></div>
+    <div class="muted"><b>四種環境（達里歐）：</b>成長 <b>${dir(g, "偏強", "偏弱")}</b>、通膨 <b>${dir(inf, "上升", "下降")}</b></div>
+    <div class="tiny">成長看景氣循環股減防禦股近 12 週 ${pct(rk.r60, 1)}；通膨看 10 年期預期通膨 3 個月變化 ${isNum(ic) ? (ic > 0 ? "+" : "") + num(ic, 2) : "－"}。${tail.length ? `這種環境歷史上較順風的是：${tail.join("；")}。` : "方向不明顯，沒有哪一類資產特別順風。"}</div>
+    <div class="grid2" style="margin-top:10px;gap:10px">
+      <div><b class="up" style="font-size:var(--fs-sm)">偏多的理由</b>${li(bull, "目前資料中找不到明顯的偏多理由")}</div>
+      <div><b class="dn" style="font-size:var(--fs-sm)">偏空的理由</b>${li(bear, "目前資料中找不到明顯的偏空理由")}</div>
+    </div>
+    <div class="note" style="margin-top:10px"><b>這代表什麼：</b>偏多 ${bull.length} 項、偏空 ${bear.length} 項。各項沒有加權，數量多寡不代表方向，也不是預測漲跌。${unknown}依你的規則，核心層不因此擇時；只有戰術層三條件一致才調整 5–10%，目前戰術層<b>${tc.on ? "已觸發" : "未觸發"}</b>。</div>
+    <p class="tiny" style="margin:8px 0 0">四種環境的資產對應來自橋水《The All Weather Story》，是長期傾向，不是每次都成立。成長、通膨方向的門檻是 AI 暫定值，可以改（index.html 的 BRIEF）。</p>`;
 }
 
 // 符合規則的候選：衛星層四道濾網全過（熱點＋資金流＋財報＋長線買點觸發）、排除流動性不足，依長線總分排序，每個市場前 PICKS_N 檔
@@ -988,6 +1102,7 @@ function renderList() {
 // 持股檢討（賣出規則）：財報轉壞＋跌破週線年線同時成立 → 列入檢討
 function holdValueTWD(m, x, h) { const fx = S.core && S.core.latest ? S.core.latest.fx : null; if (!isNum(x.px)) return null; return m === "tw" ? x.px * h.shares : isNum(fx) ? x.px * h.shares * fx : null; }
 function renderHold() {
+  renderAssist();
   const ks = Object.keys(HOLD);
   const rows = ks.map((k) => { const [m, ...r] = k.split(":"); const c = r.join(":"); const x = findItem(m, c); return { k, m, c, x, h: HOLD[k], v: x ? holdValueTWD(m, x, HOLD[k]) : null }; });
   const satTot = rows.reduce((a, r) => a + (isNum(r.v) ? r.v : 0), 0), CAP = 0.10;
@@ -1038,10 +1153,8 @@ function nextQuarterEnd() {
   const n = new Date(); const q = Math.floor(n.getMonth() / 3); const e = new Date(n.getFullYear(), q * 3 + 3, 0);
   return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}-${String(e.getDate()).padStart(2, "0")}`;
 }
-function renderCore() {
-  const C = S.core;
-  document.querySelectorAll("#coreSeg button").forEach((b) => b.classList.toggle("on", b.dataset.t === CORE.target));
-  if (!C) { $("coreTop").innerHTML = ""; $("cardCore").innerHTML = `<div class="empty">核心配置回測資料還沒產生（每天更新時會跑 scripts/core_backtest.js）。</div>`; $("cardLayers").innerHTML = ""; $("cardCoreBt").innerHTML = ""; renderLog(); return; }
+// 核心層目前狀態：目標、市值、本月定投分配、最大偏離（⑤核心配置和①本週助手共用）
+function coreCalc(C) {
   const A = C.assets, tgt = CORE.target === "rp" ? C.lastRpWeights : C.config.fixedWeights;
   const fx = C.latest.fx, usd = (s) => s !== "0050.TW";
   const pxT = Object.fromEntries(A.map((s) => [s, C.latest.px[s] * (usd(s) ? fx : 1)]));
@@ -1054,8 +1167,16 @@ function renderCore() {
   A.forEach((s) => { def[s] = Math.max(0, after * tgt[s] - val[s]); ds += def[s]; });
   const buy = Object.fromEntries(A.map((s) => [s, ds > 0 ? amt * def[s] / ds : amt * tgt[s]]));
   const drift = tot > 0 ? Math.max(...A.map((s) => Math.abs(val[s] / tot - tgt[s]))) : null;
+  return { A, tgt, fx, usd, pxT, units, val, tot, amt, buy, drift, th: C.config.rebalanceThreshold };
+}
+
+function renderCore() {
+  renderAssist();
+  const C = S.core;
+  document.querySelectorAll("#coreSeg button").forEach((b) => b.classList.toggle("on", b.dataset.t === CORE.target));
+  if (!C) { $("coreTop").innerHTML = ""; $("cardCore").innerHTML = `<div class="empty">核心配置回測資料還沒產生（每天更新時會跑 scripts/core_backtest.js）。</div>`; $("cardLayers").innerHTML = ""; $("cardCoreBt").innerHTML = ""; renderLog(); return; }
+  const { A, tgt, fx, usd, pxT, units, val, tot, amt, buy, drift, th } = coreCalc(C);
   S.coreDrift = drift;
-  const th = C.config.rebalanceThreshold;
   // 風險貢獻 RC_i = w_i × (Σw)_i ÷ wᵀΣw（Σ＝近 36 個月的共變異數）
   const wRisk = tot > 0 ? Object.fromEntries(A.map((s) => [s, val[s] / tot])) : tgt;
   let rc = null;
@@ -1135,6 +1256,7 @@ function signalSnapshot() {
 }
 
 function renderLog() {
+  renderAssist();
   const today = new Date().toISOString().slice(0, 10);
   $("cardLog").innerHTML = `<div class="ch"><b>決策日誌</b><span class="tiny">日期、動作、理由、當時訊號（自動記錄）、事後結果；每年回顧一次（達里歐原則 6：痛苦＋反思＝進步）</span></div>
     <div class="ctl"><input type="date" id="lgD" aria-label="日期" value="${today}"><input type="text" id="lgA" aria-label="動作" autocomplete="off" placeholder="動作，例如：季底再平衡、買進 2330 第1批…" style="flex:1;min-width:180px"><input type="text" id="lgR" aria-label="理由" autocomplete="off" placeholder="理由…" style="flex:2;min-width:200px"><button class="btn" id="lgAdd">新增</button></div>
