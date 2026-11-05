@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0B0D14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="市場雷達">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>try{var t=JSON.parse(localStorage.getItem("mr_tweaks")||"{}"),r=document.documentElement;r.dataset.theme=t.theme||"dark";r.dataset.density=t.density||"comfortable";r.dataset.accent=t.accent||"violet";}catch(e){}</script>
 <title>市場雷達</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -393,7 +400,7 @@ h1,h2,.ed-title{text-wrap:balance}
     <button data-p="p4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg><span>候選清單</span><span class="n">衛星</span></button>
     <button data-p="p5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 5"/></svg><span>核心配置</span><span class="n">核心</span></button>
   </nav>
-  <div class="side-foot"><b style="color:var(--t1)">核心 50／衛星 40／戰術 10</b><br>每天收盤後自動更新<span id="build"></span></div>
+  <div class="side-foot"><b style="color:var(--t1)">核心 50／衛星 40／戰術 10</b><br>每天收盤後自動更新<span id="build"></span><button class="btn sm" id="appInstall" hidden style="margin-top:10px;width:100%">安裝 App</button></div>
 </aside>
 <main class="wrap" id="main" tabindex="-1">
 <header>
@@ -1911,6 +1918,23 @@ function tick() {
   el.innerHTML = `<span class="st${tw ? " open" : ""}"><i></i>台股 ${twHol ? "休市" : tw ? "盤中" : "已收盤"}</span><span class="st${us ? " open" : ""}"><i></i>美股 ${us ? "盤中" : "已收盤"}</span>`;
 }
 tick(); setInterval(tick, 30000);
+// ═══ 安裝成 App（PWA）：Android／電腦版 Chrome、Edge 用瀏覽器的安裝視窗；iPhone 要從 Safari 的分享選單加入主畫面 ═══
+let _installEvt = null;
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function setupInstall() {
+  const b = $("appInstall"); if (!b) return;
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (isStandalone()) return;              // 已經是 App 了，不顯示按鈕
+  if (isIOS()) b.hidden = false;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); _installEvt = e; b.hidden = false; });
+  window.addEventListener("appinstalled", () => { b.hidden = true; toast("已安裝。自選、持股、日誌存在各自的瀏覽器裡，需要時用⑤的匯出／匯入搬過去。"); });
+  b.onclick = async () => {
+    if (_installEvt) { _installEvt.prompt(); await _installEvt.userChoice; _installEvt = null; b.hidden = true; return; }
+    toast(isIOS() ? "iPhone／iPad：用 Safari 開啟這個網站，按下方的「分享」按鈕，再選「加入主畫面」。" : "請用瀏覽器選單裡的「安裝應用程式」或「加到主畫面」。");
+  };
+}
+setupInstall();
 init();
 </script>
 </body>

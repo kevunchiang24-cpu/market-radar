@@ -19,6 +19,18 @@
 - 計算程式：`scripts/update.py`（`--market tw | us | macro`）、`scripts/core_backtest.js`（全天候核心層回測，Node 18 以上）
 - 資料：`data/`（程式自動產生，不要手動改）
 
+## 安裝成 App（PWA）
+
+網站可以安裝到手機主畫面或電腦，像一般 App 一樣開啟（全螢幕、有圖示）；沒有網路時會顯示最後一次看到的資料。
+
+- **iPhone／iPad**：用 Safari 開啟網站 → 下方「分享」按鈕 → 「加入主畫面」
+- **Android**：用 Chrome 開啟網站 → 左側欄最下方「安裝 App」，或瀏覽器選單「安裝應用程式」
+- **電腦（Chrome／Edge）**：網址列右邊的安裝圖示，或左側欄的「安裝 App」
+
+自選、持股、核心配置、決策日誌存在各自的瀏覽器裡；iPhone 主畫面的 App 和 Safari 不共用資料，第一次使用前先在⑤匯出、在 App 裡匯入。
+
+相關檔案：`manifest.webmanifest`、`sw.js`（先抓網路、失敗才用快取）、`icons/`。
+
 ## 介面設計
 
 設計系統「Glass Terminal」，依用途切換三種材質：
