@@ -341,6 +341,7 @@ h1,h2,.ed-title{text-wrap:balance}
 
 <!-- ① 總覽 -->
 <section class="page on" id="p1">
+  <div class="card" id="cardPicks"></div>
   <p class="intro">戰術層：現在處在債務週期哪裡、市場偏冒險還是避險、戰術層要不要轉保守。</p>
   <div class="grid3" id="macroTop"></div>
   <div class="grid6" id="macroSpark"></div>
@@ -608,6 +609,7 @@ function render() {
     if (S.tab === "p2") renderHV();
   }
   renderAlerts();
+  renderPicks();
   const pc = S.data.tw && S.data.tw.px_check;
   $("pxCheck").innerHTML = pc ? `台股價格已用證交所／櫃買中心官方收盤核對：${pc.ok.toLocaleString()} 檔一致${pc.filled ? `、${pc.filled} 檔 Yahoo 缺最新一天已補上` : ""}${pc.mismatch ? `、<b>${pc.mismatch} 檔不符（已標示「價格待確認」）</b>` : ""}。<br>` : "";
   $("fMkt").value = S.mkt;
@@ -760,6 +762,33 @@ function renderBench(d) {
     ${b.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${S.mkt}">${starTd(S.mkt, x.c)}<td>${esc(x.n)} <span class="tiny">${esc(x.c)}</span>${x.pi ? '<div class="tiny">價格指數，不含息</div>' : ""}</td><td class="num ${cls(x.b)}">${pct(x.b, 0)}</td><td class="num">${isNum(x.k) ? Math.round(x.k) : "－"}</td><td class="num">${pct(x.dd, 0)}</td><td class="num">${pct0(x.pos)}</td><td class="num">${isNum(x.pe) ? x.pe.toFixed(1) : "－"}</td><td class="nm">${lightPill(x.l)}${chgMark(S.mkt, x.c, x.l)}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">沒有資料</div>`;
   bindRows($("benchBody"));
+}
+
+// 符合規則的候選：衛星層四道濾網全過（熱點＋資金流＋財報＋長線買點觸發）、排除流動性不足，依長線總分排序，每個市場前 PICKS_N 檔
+// 使用者 2026-11-05 決定：放總覽頁最上方、排除流動性不足、每市場前 10。基本面弱的不排除，但燈號會顯示
+const PICKS_N = 10;
+function pickRows(m) {
+  const d = S.data[m]; if (!d) return null;
+  const rows = d.stocks.filter((x) => !x.etf && x.liq).map((x) => ({ ...x, _m: m, _sat: satChecks(x, m) }))
+    .filter((x) => x._sat.pass && x._sat.trig);
+  rows.sort((a, b) => (isNum(b.lt) ? b.lt : -1) - (isNum(a.lt) ? a.lt : -1));
+  return rows;
+}
+function renderPicks() {
+  const part = (m, name) => {
+    const rows = pickRows(m);
+    if (!rows) return `<div><div class="muted">${name}</div><div class="empty">資料還沒產生</div></div>`;
+    const show = rows.slice(0, PICKS_N);
+    return `<div><div class="ch"><b>${name}</b><span class="tiny">四道全過 ${rows.length} 檔${rows.length > PICKS_N ? `，列前 ${PICKS_N}` : ""}　·　資料 ${esc(S.data[m].data_date || "－")}</span></div>
+      ${show.length ? `<div style="overflow-x:auto"><table><thead><tr><th></th><th>股票</th><th>觸發條件</th><th>建議分批</th><th class="num">長線分</th><th>燈號</th></tr></thead><tbody>
+      ${show.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${m}">${starTd(m, x.c)}<td><span class="nm" translate="no">${esc(x.c)}</span> <span class="nm">${esc(x.n)}</span><br><span class="tiny">${esc(x.sec)}</span></td>
+        <td class="muted">${(x.trig || []).map(esc).join("<br>")}</td><td>第 ${batchOf(x)} 批</td><td class="num"><b>${sc(x.lt)}</b></td><td class="nm">${lightPill(x.l)}${chgMark(m, x.c, x.l)}</td></tr>`).join("")}
+      </tbody></table></div>` : `<div class="empty">今天沒有股票同時通過四道濾網</div>`}</div>`;
+  };
+  $("cardPicks").innerHTML = `<div class="ch"><b>符合你規則的候選</b><span class="tiny">衛星層：熱點＋資金流＋財報＋長線買點觸發，排除流動性不足，依長線總分排序</span></div>
+    <div class="grid2">${part("tw", "台股")}${part("us", "美股")}</div>
+    <p class="tiny" style="margin:8px 0 0">這是依你事先寫好的規則篩出的名單，不是買進建議。研究顯示回檔買點本身不降低虧損機率（台股個股 −20% 買進，5 年後仍虧損 32%，隨機買 29%），四道濾網也還沒回測驗證。進場前請先確認單股不超過衛星層 10%、寫進決策日誌。燈號「基本面弱」的股票沒有排除，請特別留意。</p>`;
+  bindRows($("cardPicks"));
 }
 
 function renderAlerts() {

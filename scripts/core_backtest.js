@@ -12,7 +12,7 @@ const CONFIG = {
   monthlyContribution: 10000,   // 每月投入（台幣）。報酬率不受金額影響，只影響顯示金額
   rebalanceThreshold: 0.05,     // 每季檢查：任一資產偏離目標超過 5 個百分點就全部拉回
   rpLookbackMonths: 36,         // 風險平價：用過去 36 個月的波動度算權重
-  maxDrawdownLimit: 0.30,       // 你可承受的最大回撤
+  maxDrawdownLimit: 0.40,       // 你可承受的最大回撤（名目金額）。2026-11-05 使用者由 30% 改為 40%，見 CLAUDE.md
   // 固定比例版（流傳的全天候簡化版，股票部分 0050 與 VTI 各半）
   fixedWeights: { '0050.TW': 0.15, VTI: 0.15, TLT: 0.40, IEF: 0.15, GLD: 0.075, DBC: 0.075 },
 };
