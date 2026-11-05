@@ -164,6 +164,7 @@ a{color:var(--acc)}
 /* 產業熱點地圖 */
 .hv{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px}
 .hv-stage{position:relative;height:440px;border-radius:var(--r-tile);overflow:hidden;background:rgba(0,0,0,.22);border:1px solid var(--hair)}
+.sum-btns{display:inline-flex;gap:6px;margin-left:auto}.sum-st{margin:-4px 0 10px;color:var(--t2)}.sum-setup{border:1px solid var(--hair2);border-radius:var(--r-tile);padding:12px 14px;margin:0 0 14px}.sum-setup ol{margin:6px 0 10px;padding-left:20px;line-height:1.7}
 .ai-head{font-size:clamp(19px,2.2vw,24px);font-weight:700;line-height:1.45;margin:2px 0 14px;text-wrap:pretty}
 .ai-secs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 22px}
 .ai-secs p{margin:4px 0 0;font-size:var(--fs-sm);line-height:1.75;color:var(--t2);text-wrap:pretty}
@@ -850,11 +851,11 @@ function renderBench(d) {
 // ═════════════ ① 總覽：AI 總結（scripts/ai_summary.py 每天產生 data/summary.json） ═════════════
 function renderSummary() {
   const el = $("cardSum"), A = S.summary; if (!el) return;
-  if (!A || !A.headline) { el.innerHTML = `<div class="ch"><b>AI 總結</b></div><div class="empty">總結會在下次每日更新後產生。</div>`; return; }
+  if (!A || !A.headline) { el.innerHTML = `<div class="ch"><b>AI 總結</b>${sumBtnHtml()}</div><div class="empty">總結會在下次每日更新後產生，或按右上角立即產生。</div>${sumPanelHtml()}`; bindSumBtn(); return; }
   const ai = A.source === "claude";
   const list = (arr) => (arr || []).map((t) => `<li>${esc(t)}</li>`).join("");
   const old = ["台股", "美股"].some((k) => S.data[k === "台股" ? "tw" : "us"] && A.asof && A.asof[k] && S.data[k === "台股" ? "tw" : "us"].data_date > A.asof[k]);
-  el.innerHTML = `<div class="ch"><b>${ai ? "AI 總結" : "今日摘要"}</b><span class="tiny">${ai ? `由 ${esc(A.model || "Claude")} 根據下方系統資料撰寫` : "規則自動組句（尚未設定 ANTHROPIC_API_KEY，或這次 AI 呼叫失敗）"}　·　${esc(A.generated || "")}</span></div>
+  el.innerHTML = `<div class="ch"><b>${ai ? "AI 總結" : "今日摘要"}</b><span class="tiny">${ai ? `由 ${esc(A.model || "Claude")} 根據下方系統資料撰寫` : "規則自動組句（尚未設定 ANTHROPIC_API_KEY，或這次 AI 呼叫失敗）"}　·　${esc(A.generated || "")}</span>${sumBtnHtml()}</div>${sumPanelHtml()}
     <p class="ai-head">${esc(A.headline)}</p>
     ${old ? `<div class="warn">這份總結用的是比目前網站更舊的資料，數字請以下方各區塊為準。</div>` : ""}
     <div class="ai-secs">${(A.sections || []).map((x) => `<div><div class="ai-t">${esc(x.title)}</div><p>${esc(x.text)}</p></div>`).join("")}</div>
@@ -864,6 +865,75 @@ function renderSummary() {
       <div><div class="ai-t">依你的規則，這週要留意</div><ul>${list(A.watch) || "<li>沒有</li>"}</ul></div>
     </div>
     <p class="tiny" style="margin:10px 0 0">資料：台股 ${esc((A.asof || {})["台股"] || "－")}、美股 ${esc((A.asof || {})["美股"] || "－")}、總經 ${esc((A.asof || {})["總經"] || "－")}。${ai ? "AI 只拿到系統資料、不看新聞，被要求不預測漲跌、不給買賣建議；仍可能寫錯，數字以下方各區塊為準。" : ""}這不是投資建議。</p>`;
+  bindSumBtn();
+}
+
+// ── 「立即重新總結」：用使用者自己的 GitHub 權杖觸發雲端流程 .github/workflows/ai-summary.yml ──
+// Claude 金鑰只在 GitHub Secrets；網頁只存一把「只能觸發這個專案流程」的 GitHub 權杖，而且只存在這台裝置的瀏覽器
+const GH_REPO = "kevunchiang24-cpu/market-radar", GH_WF = "ai-summary.yml";
+const SUM = { busy: false, msg: "", link: "", panel: false };
+const ghTok = () => LS.get("mr_gh_token", "");
+function sumBtnHtml() { return `<span class="sum-btns"><button class="btn sm" id="sumRun"${SUM.busy ? " disabled" : ""}>${SUM.busy ? "總結中…" : "立即重新總結"}</button>${ghTok() ? `<button class="btn sm" id="sumCfg" title="GitHub 權杖設定">設定</button>` : ""}</span>`; }
+function sumPanelHtml() {
+  const st = SUM.msg ? `<div class="tiny sum-st" role="status">${esc(SUM.msg)}${SUM.link ? `　<a href="${esc(SUM.link)}" target="_blank" rel="noopener">看執行紀錄</a>` : ""}</div>` : "";
+  if (!SUM.panel) return st;
+  return st + `<div class="sum-setup">
+    <b>第一次使用：在這台裝置設定 GitHub 權杖</b>
+    <ol class="tiny">
+      <li>到 GitHub → 右上角頭像 → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token。</li>
+      <li>Repository access 選 <b>Only select repositories</b> → 只勾 <b>market-radar</b>。</li>
+      <li>Permissions → Repository permissions → <b>Actions</b> 設為 <b>Read and write</b>，其他都不用開。到期日自己決定。</li>
+      <li>產生後把權杖貼到下面。它只存在這台裝置的瀏覽器，只能觸發這個專案的流程，不能改程式碼、也碰不到 Claude 金鑰。</li>
+    </ol>
+    <div class="ctl"><input type="password" id="sumTok" autocomplete="off" aria-label="GitHub 權杖" placeholder="github_pat_…" style="flex:1;min-width:220px"><button class="btn" id="sumSave">儲存並總結</button><button class="btn" id="sumCancel">取消</button></div>
+    ${ghTok() ? `<button class="btn x" id="sumForget" style="margin-top:6px">刪除這台裝置上的權杖</button>` : ""}
+  </div>`;
+}
+function bindSumBtn() {
+  const b = $("sumRun"); if (b) b.onclick = () => { if (SUM.busy) return; if (!ghTok()) { SUM.panel = true; renderSummary(); const i = $("sumTok"); if (i) i.focus(); return; } sumDispatch(); };
+  const sv = $("sumSave"); if (sv) sv.onclick = () => { const v = ($("sumTok").value || "").trim(); if (!v) return; LS.set("mr_gh_token", v); SUM.panel = false; sumDispatch(); };
+  const cc = $("sumCancel"); if (cc) cc.onclick = () => { SUM.panel = false; renderSummary(); };
+  const fg = $("sumForget"); if (fg) fg.onclick = () => { localStorage.removeItem("mr_gh_token"); SUM.panel = false; SUM.msg = "已刪除這台裝置上的 GitHub 權杖。"; renderSummary(); };
+  const cf = $("sumCfg"); if (cf) cf.onclick = () => { SUM.panel = !SUM.panel; renderSummary(); };
+}
+const sumSet = (msg, link = "") => { SUM.msg = msg; SUM.link = link; renderSummary(); };
+const ghHead = () => ({ Authorization: `Bearer ${ghTok()}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function sumDispatch() {
+  SUM.busy = true; sumSet("送出中…");
+  const prev = S.summary && S.summary.generated, t0 = Date.now();
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF}/dispatches`, { method: "POST", headers: ghHead(), body: JSON.stringify({ ref: "main" }) });
+    if (r.status !== 204) {
+      const why = { 401: "權杖無效或已過期，請重新貼一把。", 403: "權杖沒有 Actions 的寫入權限。", 404: "找不到專案或流程：權杖要能存取 market-radar，而且 ai-summary.yml 要已經推上 GitHub。", 422: "GitHub 拒絕這次觸發（流程設定有問題）。" }[r.status] || `GitHub 回應 ${r.status}。`;
+      if (r.status === 401) SUM.panel = true;
+      throw new Error(why);
+    }
+    // 等雲端流程跑完（最多 10 分鐘）
+    let run = null;
+    for (let i = 0; i < 75; i++) {
+      await sleep(8000);
+      const q = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WF}/runs?event=workflow_dispatch&per_page=3`, { headers: ghHead() });
+      if (!q.ok) continue;
+      const js = await q.json();
+      run = (js.workflow_runs || []).find((x) => new Date(x.created_at).getTime() >= t0 - 120000) || run;
+      if (!run) { sumSet("等待 GitHub 排程…"); continue; }
+      if (run.status !== "completed") { sumSet(run.status === "queued" ? "雲端排隊中…" : "雲端執行中：Claude 正在寫總結…", run.html_url); continue; }
+      break;
+    }
+    if (!run || run.status !== "completed") throw new Error("雲端超過 10 分鐘還沒跑完，稍後重新整理看看。");
+    if (run.conclusion !== "success") { SUM.link = run.html_url; throw new Error("雲端執行失敗，請看執行紀錄。"); }
+    // 等 GitHub Pages 更新 data/summary.json（通常 1 分鐘內）
+    if (!/github\.io$/.test(location.hostname)) { SUM.busy = false; sumSet("雲端已完成。本機預覽要 git pull 才看得到新總結。", run.html_url); return; }
+    sumSet("總結已寫好，等網站更新…", run.html_url);
+    for (let i = 0; i < 24; i++) {
+      await sleep(10000);
+      try { const j = await loadJSON("data/summary.json"); if (j && j.generated && j.generated !== prev) { S.summary = j; SUM.busy = false; SUM.msg = ""; SUM.link = ""; renderSummary(); toast(j.source === "claude" ? "AI 總結已更新" : "總結已更新（這次用規則組句，請確認 ANTHROPIC_API_KEY）"); return; } } catch (e) { /* 再等一下 */ }
+    }
+    throw new Error("雲端已完成，但網站還沒更新，稍後重新整理。");
+  } catch (e) {
+    SUM.busy = false; sumSet(e.message || String(e), SUM.link);
+  }
 }
 
 // ═════════════ ① 總覽：本週助手（依使用者規則整理該做的事，不是買賣建議） ═════════════

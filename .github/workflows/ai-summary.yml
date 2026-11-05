@@ -1,0 +1,48 @@
+name: AI 總結（手動）
+
+# 網站①總覽的「立即重新總結」按鈕會觸發這個流程，也可以在 Actions 頁面手動執行。
+# 只重寫 data/summary.json，不重新抓市場資料（用最後一次每日更新的資料）。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ai-summary
+  cancel-in-progress: false
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝套件
+        run: pip install "anthropic>=2.5"
+
+      - name: AI 總結
+        run: python scripts/ai_summary.py
+
+      - name: 存回 GitHub
+        run: |
+          git config user.name "market-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/summary.json
+          if git diff --cached --quiet; then
+            echo "總結沒有變化"
+            exit 0
+          fi
+          git commit -m "AI 總結 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep 10
+          done
+          exit 1

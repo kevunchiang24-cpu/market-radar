@@ -19,6 +19,13 @@
 - 計算程式：`scripts/update.py`（`--market tw | us | macro`）、`scripts/core_backtest.js`（全天候核心層回測，Node 18 以上）
 - 資料：`data/`（程式自動產生，不要手動改）
 
+## AI 總結
+
+①總覽最上方。每日更新最後一步執行 `scripts/ai_summary.py`，把當天資料交給 Claude（`claude-opus-5-5`）寫總結，存到 `data/summary.json`。
+
+- 需要 GitHub Secret `ANTHROPIC_API_KEY`；沒有或失敗時改用規則組句
+- **立即重新總結**：總結卡片右上角的按鈕會觸發 `.github/workflows/ai-summary.yml`（只重寫總結，不重抓市場資料，約 1–2 分鐘）。第一次使用要在該裝置貼一把 GitHub Fine-grained 權杖：只選 market-radar 專案、只開 Actions 讀寫權限；權杖只存在那台裝置的瀏覽器
+
 ## 安裝成 App（PWA）
 
 網站可以安裝到手機主畫面或電腦，像一般 App 一樣開啟（全螢幕、有圖示）；沒有網路時會顯示最後一次看到的資料。
