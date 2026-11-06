@@ -1926,7 +1926,7 @@ CYCLE = ["擴張初期", "擴張後期", "緊縮", "衰退"]
 def fred_series(sid, start):
     """FRED 資料。有 FRED_API_KEY（免費金鑰）就走官方 API；沒有就用公開 CSV。
     公開 CSV 在 GitHub Actions 的雲端伺服器上常常連不上，所以等待時間設短，失敗就交給備援來源"""
-    key = os.environ.get("FRED_API_KEY")
+    key = (os.environ.get("FRED_API_KEY") or "").strip()  # 貼 Secret 時常多帶空白或換行，FRED 會回 400
     if key:
         r = requests.get("https://api.stlouisfed.org/fred/series/observations",
                          params={"series_id": sid, "api_key": key, "file_type": "json", "observation_start": start},
@@ -1936,7 +1936,12 @@ def fred_series(sid, start):
             s_ = pd.Series({pd.Timestamp(o["date"]): to_num(o.get("value")) for o in obs}, dtype=float).dropna()
             if len(s_):
                 return s_.sort_index()
-        log(f"  FRED API {sid}：HTTP {r.status_code}，改用公開 CSV")
+        why = ""
+        try:
+            why = str(r.json().get("error_message") or "")[:160]  # FRED 的錯誤原因，不含金鑰本身
+        except Exception:  # noqa
+            pass
+        log(f"  FRED API {sid}：HTTP {r.status_code} {why}，改用公開 CSV（金鑰長度 {len(key)}，應為 32）")
     # FRED 會擋偽裝成瀏覽器的 User-Agent（會一直不回應），所以用一般程式名稱
     url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd={start}"
     last = None
