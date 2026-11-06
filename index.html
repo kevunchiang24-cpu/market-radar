@@ -1047,6 +1047,47 @@ function renderBrief() {
     <p class="tiny" style="margin:8px 0 0">四種環境的資產對應來自橋水《The All Weather Story》，是長期傾向，不是每次都成立。成長、通膨方向的門檻是 AI 暫定值，可以改（index.html 的 BRIEF）。</p>`;
 }
 
+// 盤中現價（使用者 2026-11-06 決定：做法 C）：網頁按鈕 → 使用者自己的 Cloudflare Worker（worker/quote.js）→ 證交所 MIS（台股即時，連不上時改 Yahoo 延遲約 20 分）、Yahoo（美股延遲約 15 分）
+// 只顯示參考，不重算任何燈號、買點、報酬、市值、單股上限；那些照舊用收盤資料，避免盤中波動帶著規則走
+const QUOTE_URL = "https://market-radar-quote.kevunchiang24.workers.dev";   // 使用者的 Cloudflare Worker（程式在 worker/quote.js）
+const LIVE = { tw: {}, us: {}, at: null, busy: false, msg: "" };
+function liveTargets() {
+  const t = { tw: new Set(), us: new Set() };
+  ["tw", "us"].forEach((m) => (pickRows(m) || []).slice(0, PICKS_N).forEach((x) => t[m].add(x.c)));
+  Object.keys(HOLD).forEach((k) => { const [m, ...r] = k.split(":"); if (t[m]) t[m].add(r.join(":")); });
+  return t;
+}
+async function liveFetch() {
+  if (!QUOTE_URL) { LIVE.msg = "還沒設定報價 Worker 網址（index.html 的 QUOTE_URL）"; renderPicks(); renderHold(); return; }
+  const t = liveTargets();
+  const tw = [...t.tw].map((c) => { const x = findItem("tw", c); return (x && x.mk === "上櫃" ? "otc_" : "tse_") + c; });
+  if (!tw.length && !t.us.size) { LIVE.msg = "候選和持股都是空的，沒有要查的股票"; renderPicks(); renderHold(); return; }
+  LIVE.busy = true; LIVE.msg = ""; renderPicks(); renderHold();
+  try {
+    const r = await fetch(`${QUOTE_URL}/?tw=${tw.join(",")}&us=${[...t.us].map(encodeURIComponent).join(",")}`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    LIVE.tw = j.tw || {}; LIVE.us = j.us || {}; LIVE.at = new Date();
+    const miss = (j.err || []).filter((e) => !e.includes("改用 Yahoo")).length;
+    const fb = (j.err || []).some((e) => e.includes("改用 Yahoo"));
+    LIVE.msg = [miss ? `${miss} 檔抓不到` : "", fb ? "證交所即時報價連不上，台股改用延遲報價" : ""].filter(Boolean).join("；");
+  } catch (e) { LIVE.msg = "現價暫時抓不到（" + String(e.message || e).slice(0, 60) + "），其他資料不受影響"; }
+  LIVE.busy = false; renderPicks(); renderHold();
+}
+function liveBtnHtml(id) {
+  const at = LIVE.at ? `${String(LIVE.at.getHours()).padStart(2, "0")}:${String(LIVE.at.getMinutes()).padStart(2, "0")} 更新` : "";
+  return `<span class="sum-btns"><span class="tiny">${esc(LIVE.msg || at)}</span><button class="btn sm" id="${id}"${LIVE.busy ? " disabled" : ""}>${LIVE.busy ? "抓取中…" : "更新現價"}</button></span>`;
+}
+function liveCell(m, c) {
+  const q = (LIVE[m] || {})[c];
+  if (!q || !isNum(q.p)) return `<td class="num tiny">－</td>`;
+  const ch = isNum(q.prev) ? q.p / q.prev - 1 : null;
+  const mis = q.src === "mis";
+  const tag = q.kind === "close" ? "收盤" : mis ? (q.kind === "mid" ? "即時·買賣中價" : "即時") : m === "tw" ? "延遲約20分" : "延遲約15分";
+  const tm = mis ? (q.t || "").slice(11, 16) : "";
+  return `<td class="num" title="${esc(q.t || "")}">${num(q.p)} <span class="${cls(ch)}">${pct(ch, 1)}</span><br><span class="tiny">${tag}${tm ? " " + tm : ""}</span></td>`;
+}
+
 // 符合規則的候選：衛星層四道濾網全過（熱點＋資金流＋財報＋長線買點觸發）、排除流動性不足，依長線總分排序，每個市場前 PICKS_N 檔
 // 使用者 2026-11-05 決定：放總覽頁最上方、排除流動性不足、每市場前 10。基本面弱的不排除，但燈號會顯示
 const PICKS_N = 10;
@@ -1063,15 +1104,16 @@ function renderPicks() {
     if (!rows) return `<div><div class="muted">${name}</div><div class="empty">資料還沒產生</div></div>`;
     const show = rows.slice(0, PICKS_N);
     return `<div><div class="ch"><b>${name}</b><span class="tiny">四道全過 ${rows.length} 檔${rows.length > PICKS_N ? `，列前 ${PICKS_N}` : ""}　·　資料 ${esc(S.data[m].data_date || "－")}</span></div>
-      ${show.length ? `<div style="overflow-x:auto"><table><thead><tr><th></th><th>股票</th><th>觸發條件</th><th>建議分批</th><th class="num">長線分</th><th>燈號</th></tr></thead><tbody>
+      ${show.length ? `<div style="overflow-x:auto"><table><thead><tr><th></th><th>股票</th><th>觸發條件</th><th>建議分批</th><th class="num">長線分</th><th>燈號</th><th class="num">盤中價</th></tr></thead><tbody>
       ${show.map((x) => `<tr class="click" data-c="${esc(x.c)}" data-m="${m}">${starTd(m, x.c)}<td><span class="nm" translate="no">${esc(x.c)}</span> <span class="nm">${esc(x.n)}</span><br><span class="tiny">${esc(x.sec)}</span></td>
-        <td class="muted">${(x.trig || []).map(esc).join("<br>")}</td><td>第 ${batchOf(x)} 批</td><td class="num"><b>${sc(x.lt)}</b></td><td class="nm">${lightPill(x.l)}${chgMark(m, x.c, x.l)}</td></tr>`).join("")}
+        <td class="muted">${(x.trig || []).map(esc).join("<br>")}</td><td>第 ${batchOf(x)} 批</td><td class="num"><b>${sc(x.lt)}</b></td><td class="nm">${lightPill(x.l)}${chgMark(m, x.c, x.l)}</td>${liveCell(m, x.c)}</tr>`).join("")}
       </tbody></table></div>` : `<div class="empty">今天沒有股票同時通過四道濾網</div>`}</div>`;
   };
-  $("cardPicks").innerHTML = `<div class="ch"><b>符合你規則的候選</b><span class="tiny">衛星層：熱點＋資金流＋財報＋長線買點觸發，排除流動性不足，依長線總分排序</span></div>
+  $("cardPicks").innerHTML = `<div class="ch"><b>符合你規則的候選</b><span class="tiny">衛星層：熱點＋資金流＋財報＋長線買點觸發，排除流動性不足，依長線總分排序</span>${liveBtnHtml("livePicks")}</div>
     <div class="grid2">${part("tw", "台股")}${part("us", "美股")}</div>
-    <p class="tiny" style="margin:8px 0 0">這是依你事先寫好的規則篩出的名單，不是買進建議。研究顯示回檔買點本身不降低虧損機率（台股個股 −20% 買進，5 年後仍虧損 32%，隨機買 29%），四道濾網也還沒回測驗證。進場前請先確認單股不超過衛星層 10%、寫進決策日誌。燈號「基本面弱」的股票沒有排除，請特別留意。</p>`;
+    <p class="tiny" style="margin:8px 0 0">這是依你事先寫好的規則篩出的名單，不是買進建議。研究顯示回檔買點本身不降低虧損機率（台股個股 −20% 買進，5 年後仍虧損 32%，隨機買 29%），四道濾網也還沒回測驗證。進場前請先確認單股不超過衛星層 10%、寫進決策日誌。燈號「基本面弱」的股票沒有排除，請特別留意。「盤中價」只供參考，篩選、燈號、買點都照收盤資料算，不會因盤中價格改變。</p>`;
   bindRows($("cardPicks"));
+  $("livePicks").onclick = liveFetch;
 }
 
 function renderAlerts() {
@@ -1277,20 +1319,21 @@ function renderHold() {
   const satTot = rows.reduce((a, r) => a + (isNum(r.v) ? r.v : 0), 0), CAP = 0.10;
   const over = rows.filter((r) => isNum(r.v) && satTot > 0 && r.v / satTot > CAP);
   const body = rows.map(({ k, m, c, x, h, v }) => {
-    if (!x) return `<tr><td>${esc(c)}</td><td colspan="8" class="tiny">這次掃描沒有這檔的資料</td><td><button class="btn x" data-del="${esc(k)}">移除</button></td></tr>`;
+    if (!x) return `<tr><td>${esc(c)}</td><td colspan="9" class="tiny">這次掃描沒有這檔的資料</td><td><button class="btn x" data-del="${esc(k)}">移除</button></td></tr>`;
     const bad = x.fin === "down" || (isNum(x.q) && x.q < 35), below = isNum(x.wma) && x.wma < 0;
     const st = bad && below ? ["列入檢討", "bad"] : bad || below ? ["注意", "mid"] : ["正常", "ok"];
     const ret = isNum(h.cost) && h.cost > 0 ? x.px / h.cost - 1 : null;
     return `<tr class="click" data-c="${esc(c)}" data-m="${m}"><td>${esc(c)} ${esc(x.n)}<br><span class="tiny">${m === "tw" ? "台股" : "美股"}</span></td><td class="num">${h.shares.toLocaleString()}</td>
-      <td class="num">${isNum(h.cost) ? num(h.cost) : "－"}</td><td class="num">${num(x.px)}</td><td class="num ${cls(ret)}">${pct(ret, 1)}</td><td class="num">${ntd(v)}</td>
+      <td class="num">${isNum(h.cost) ? num(h.cost) : "－"}</td><td class="num">${num(x.px)}</td>${liveCell(m, c)}<td class="num ${cls(ret)}">${pct(ret, 1)}</td><td class="num">${ntd(v)}</td>
       <td class="num ${isNum(v) && satTot > 0 && v / satTot > CAP ? "up" : ""}">${isNum(v) && satTot > 0 ? (v / satTot * 100).toFixed(1) + "%" : "－"}</td>
       <td>${finPill(x.fin)}</td><td class="num ${cls(x.wma)}">${pct(x.wma, 0)}</td><td class="nm"><span class="pill ${st[1]}">${st[0]}</span>${isNum(v) && satTot > 0 && v / satTot > CAP ? ' <span class="pill bad">超過單股上限</span>' : ""}</td></tr>`; }).join("");
-  $("cardHold").innerHTML = `<div class="ch"><b>持股檢討（賣出規則）</b><span class="tiny">財報轉壞＋跌破週線年線（MA52）同時成立 → 列入檢討</span></div>
-    ${rows.length ? `<div style="overflow-x:auto"><table><thead><tr><th>持股</th><th class="num">股數</th><th class="num">成本</th><th class="num">現價</th><th class="num">報酬</th><th class="num">市值（台幣）</th><th class="num">佔衛星層</th><th>財報</th><th class="num">距週MA52</th><th>狀態</th></tr></thead><tbody>${body}</tbody></table></div>`
+  $("cardHold").innerHTML = `<div class="ch"><b>持股檢討（賣出規則）</b><span class="tiny">財報轉壞＋跌破週線年線（MA52）同時成立 → 列入檢討</span>${rows.length ? liveBtnHtml("liveHold") : ""}</div>
+    ${rows.length ? `<div style="overflow-x:auto"><table><thead><tr><th>持股</th><th class="num">股數</th><th class="num">成本</th><th class="num">收盤價</th><th class="num">盤中價</th><th class="num">報酬</th><th class="num">市值（台幣）</th><th class="num">佔衛星層</th><th>財報</th><th class="num">距週MA52</th><th>狀態</th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<div class="empty">還沒有持股。點任何一檔股票，在跳出的視窗輸入股數和成本即可加入。</div>`}
     ${over.length ? `<div class="warn" style="margin-top:10px"><b>單股上限</b>：${over.map((r) => esc(r.c) + " 佔 " + (r.v / satTot * 100).toFixed(1) + "%").join("、")}，超過你訂的衛星層 10%（達里歐原則 4：避免單一押注過大）。${rows.length < 10 ? `你目前只有 ${rows.length} 檔，平均每檔就超過 10%；持股少於 10 檔時一定會出現這個警示。` : ""}</div>` : ""}
-    <p class="tiny" style="margin:8px 0 0">單股上限：每檔不超過衛星層總市值的 10%。財報轉壞＝財報判定轉弱，或品質分數低於 35。美股市值用核心配置回測資料裡的最新匯率換算。</p>`;
+    <p class="tiny" style="margin:8px 0 0">單股上限：每檔不超過衛星層總市值的 10%。財報轉壞＝財報判定轉弱，或品質分數低於 35。美股市值用核心配置回測資料裡的最新匯率換算。報酬、市值、佔比、檢討狀態都用收盤價算；盤中價只供參考。</p>`;
   bindRows($("cardHold"));
+  if ($("liveHold")) $("liveHold").onclick = liveFetch;
   $("cardHold").querySelectorAll("button[data-del]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); const k = b.dataset.del, old = HOLD[k]; delete HOLD[k]; LS.set("mr_hold", HOLD); renderHold(); renderCore(); toast("已移除持股", () => { HOLD[k] = old; LS.set("mr_hold", HOLD); renderHold(); renderCore(); }); });
 }
 

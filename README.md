@@ -115,3 +115,13 @@ MR_DATA_DIR=/tmp/mr python scripts/update.py --market tw --limit 60
 `--limit` 只跑少量個股，`MR_DATA_DIR` 讓輸出不要蓋掉正式資料。
 
 本專案只整理公開資料、計算指標，不是投資建議。
+
+## 盤中現價（Cloudflare Worker）
+
+網站上「符合你規則的候選」「持股檢討」有「更新現價」按鈕。證交所、Yahoo 不允許網頁直接呼叫，所以經過一支自己的 Cloudflare Worker 轉接：
+
+- 程式：`worker/quote.js`，部署在 Cloudflare 帳號的 Worker `market-radar-quote`（https://market-radar-quote.kevunchiang24.workers.dev）
+- 修改程式後：Cloudflare → Workers & Pages → market-radar-quote → Edit code，整份貼上 → Deploy
+- 只接受 `kevunchiang24-cpu.github.io` 和本機呼叫；免費方案每天 10 萬次請求
+- 台股先抓證交所 MIS（即時），從 Cloudflare 連線時常被擋，失敗就改 Yahoo（延遲約 20 分）；美股用 Yahoo（盤中延遲約 15 分）
+- 盤中價只供參考，所有燈號、買點、報酬、市值都還是用收盤資料
