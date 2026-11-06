@@ -6,3 +6,4 @@ lxml>=5.0
 html5lib>=1.1
 beautifulsoup4>=4.12
 anthropic>=2.5
+pywebpush>=2.0

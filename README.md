@@ -97,12 +97,15 @@
 
 網站上的「燈號有沒有用？」用 20 年月線重算每個月的價格燈號，統計之後 1、3、5 年的報酬中位數。只回測價格燈號（沒有歷史財報），而且有存活者偏差。
 
-## 燈號變化通知（選填）
+## App 推播通知
 
-到 GitHub → Settings → Secrets and variables → Actions 新增：
+網站裝成 App 後，在①總覽「燈號變化紀錄」下方按「開啟通知」。iPhone 要先用 Safari「分享 → 加入主畫面」，從主畫面打開才有這個按鈕（iOS 16.4 以上）。每台裝置各自開啟一次。
 
-- `TELEGRAM_BOT_TOKEN`：跟 @BotFather 建立機器人取得
-- `TELEGRAM_CHAT_ID`：你的聊天 ID
+- 通知時機（`scripts/notify.py`，每次每日更新最後一步）：燈號變化、戰術層觸發或解除、總經條件、債務週期改變、大盤跌破或站回週線 MA52、資料缺口。只有「跟上次比有改變」才通知
+- 訂閱清單：存在 Cloudflare Worker `market-radar-quote` 的 KV（綁定名稱 `PUSH`），程式在 `worker/quote.js` 的 `/push/*`
+- GitHub Secrets：`VAPID_PRIVATE_KEY`（推播私鑰）、`PUSH_TOKEN`（讀訂閱清單的密語，Cloudflare Worker 也要設定同一個值的 Secret `PUSH_TOKEN`）
+- 測試：GitHub → Actions →「App 推播測試」→ Run workflow
+- 持股檢討、再平衡用的是存在瀏覽器裡的資料，伺服器看不到，不會推播
 
 沒設定也沒關係，變化紀錄一樣會寫進 `data/alerts.json` 並顯示在網站上。
 

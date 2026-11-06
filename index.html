@@ -1121,8 +1121,71 @@ function renderAlerts() {
   $("cardAlerts").innerHTML = `<div class="ch"><b>燈號變化紀錄</b><span class="tiny">大盤燈號改變，或品質≥60的個股新亮便宜燈</span></div>
     ${a.length ? `<table><tbody>${a.map((e) => `<tr class="click" data-c="${esc(e.c)}" data-m="${e.m}"><td class="tiny">${esc(e.d)}</td><td>${e.kind === "bench" ? '<span class="tag">大盤</span>' : ""}${esc(e.c)} ${esc(e.n)}</td><td>${lightPill(e.from)} → ${lightPill(e.to)}</td></tr>`).join("")}</tbody></table>`
       : `<div class="empty">還沒有變化紀錄（每天更新後會跟前一天比較）</div>`}
-    <p class="tiny" style="margin:8px 0 0">想收到手機通知：在 GitHub 專案的 Settings → Secrets 加上 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID。</p>`;
+    ${pushHtml()}`;
   bindRows($("cardAlerts"));
+  const pb = $("pushBtn"); if (pb) pb.onclick = PUSH.state === "on" ? pushDisable : pushEnable;
+}
+
+// App 推播（2026-11-06 使用者決定：取代 Telegram；iPhone 要先加入主畫面）
+// 訂閱存在使用者的 Cloudflare Worker（worker/quote.js 的 /push/*），由 GitHub Actions 的 scripts/notify.py 發送
+// 通知內容：燈號變化、戰術層觸發／解除、總經條件、債務週期改變、大盤跌破／站回週線 MA52、資料缺口
+const VAPID_PUB = "BOXCxiCCqUffGfaLKRupIiEo7nWQvlS1FOZ97_uP8M8LHB0IgLbkrnvpR6OjYvzSKM8rPk9uyiEqv5S55NDF7Zc";
+const PUSH = { state: "checking", busy: false, msg: "" };
+function b64u8(s) { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, (c) => c.charCodeAt(0)); }
+async function pushSave(sub) {
+  const r = await fetch(`${QUOTE_URL}/push/sub`, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sub: sub.toJSON(), ua: (isIOS() ? "iPhone/iPad " : "") + navigator.userAgent.slice(0, 100) }) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "HTTP " + r.status);
+}
+async function pushInit() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    PUSH.state = isIOS() && !isStandalone() ? "ios-browser" : "unsupported"; renderAlerts(); return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    PUSH.state = sub ? "on" : Notification.permission === "denied" ? "denied" : "off";
+    if (sub) pushSave(sub).catch(() => {}); // 每次打開都補存一次，避免 Worker 那邊遺失
+  } catch (e) { PUSH.state = "off"; }
+  renderAlerts();
+}
+async function pushEnable() {
+  PUSH.busy = true; PUSH.msg = ""; renderAlerts();
+  try {
+    const perm = await Notification.requestPermission(); // iPhone 規定要在按鈕點擊裡直接詢問
+    if (perm !== "granted") { PUSH.state = perm === "denied" ? "denied" : "off"; throw new Error("沒有允許通知"); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(VAPID_PUB) });
+    await pushSave(sub);
+    PUSH.state = "on"; PUSH.msg = "已開啟。這台裝置之後會收到通知";
+  } catch (e) { PUSH.msg = "開啟失敗：" + String(e.message || e).slice(0, 80); }
+  PUSH.busy = false; renderAlerts();
+}
+async function pushDisable() {
+  PUSH.busy = true; PUSH.msg = ""; renderAlerts();
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await fetch(`${QUOTE_URL}/push/unsub`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    PUSH.state = "off"; PUSH.msg = "已關閉這台裝置的通知";
+  } catch (e) { PUSH.msg = "關閉失敗：" + String(e.message || e).slice(0, 80); }
+  PUSH.busy = false; renderAlerts();
+}
+function pushHtml() {
+  const st = {
+    checking: ["檢查中…", ""],
+    "ios-browser": ["iPhone 要先把網站加入主畫面", "在 Safari 按下方「分享」→「加入主畫面」，再從主畫面打開市場雷達，這裡就會出現「開啟通知」按鈕（需要 iOS 16.4 以上）。"],
+    unsupported: ["這個瀏覽器不支援 App 推播", "請改用 Chrome、Edge，或 iPhone 加入主畫面後的 App。"],
+    denied: ["通知被封鎖了", isIOS() ? "到 iPhone 的「設定」→「通知」→「市場雷達」打開允許通知，再回來按「開啟通知」。" : "請在瀏覽器網址列左邊的網站設定裡，把「通知」改成允許。"],
+    off: ["這台裝置還沒開啟通知", ""],
+    on: ["這台裝置已開啟通知", ""],
+  }[PUSH.state] || ["", ""];
+  const btn = ["off", "on", "denied"].includes(PUSH.state)
+    ? `<button class="btn sm" id="pushBtn"${PUSH.busy ? " disabled" : ""}>${PUSH.busy ? "處理中…" : PUSH.state === "on" ? "關閉通知" : "開啟通知"}</button>` : "";
+  return `<div class="sum-setup" style="margin:12px 0 0"><div class="ch" style="margin:0"><b style="font-size:13px">App 通知：${st[0]}</b>${btn}</div>
+    ${st[1] ? `<p class="tiny" style="margin:6px 0 0">${st[1]}</p>` : ""}${PUSH.msg ? `<p class="tiny" style="margin:6px 0 0">${esc(PUSH.msg)}</p>` : ""}
+    <p class="tiny" style="margin:6px 0 0">通知時機：燈號變化、戰術層觸發或解除、總經條件、債務週期改變、大盤跌破或站回週線 MA52、資料缺口。每天更新後只在「有改變」時通知；持股檢討、再平衡用的是你存在這台裝置的資料，伺服器看不到，所以不會推播，請打開 App 看「本週助手」。每台裝置要各自開啟一次。</p></div>`;
 }
 
 // ═════════════ ② 熱點 ═════════════
@@ -2037,7 +2100,8 @@ const isStandalone = () => window.matchMedia("(display-mode: standalone)").match
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function setupInstall() {
   const b = $("appInstall"); if (!b) return;
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").then(() => pushInit()).catch(() => { PUSH.state = "unsupported"; });
+  else pushInit();
   if (isStandalone()) return;              // 已經是 App 了，不顯示按鈕
   if (isIOS()) b.hidden = false;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); _installEvt = e; b.hidden = false; });

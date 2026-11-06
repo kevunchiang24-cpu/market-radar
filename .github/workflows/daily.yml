@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      # 選填：設定後燈號變化會發 Telegram 通知（GitHub → Settings → Secrets and variables → Actions）
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # 選填：App 推播。VAPID_PRIVATE_KEY＝推播私鑰、PUSH_TOKEN＝讀 Cloudflare Worker 訂閱清單的密語（scripts/notify.py）
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
       # 選填：FinMind 免費金鑰。有設定才會回補上櫃個股的法人歷史；大盤法人歷史不需要金鑰
       FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
       # 選填：FRED 免費 API 金鑰。GitHub 的伺服器常連不上 FRED 公開網址，有金鑰就改走官方 API（信用利差只有 FRED 有）
@@ -82,6 +82,11 @@ jobs:
       - name: AI 總結
         continue-on-error: true
         run: python scripts/ai_summary.py
+
+      # App 推播：跟上次比有改變才通知；失敗不影響資料
+      - name: App 推播
+        continue-on-error: true
+        run: python scripts/notify.py
 
       - name: 存回 GitHub
         run: |

@@ -966,20 +966,7 @@ def push_alerts(events):
     hist = load_json(path, [])
     hist = (events + hist)[:200]
     save_json(path, hist)
-    token, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
-    if not events or not token or not chat:
-        return
-    lines = ["市場雷達 燈號變化"]
-    for e in events:
-        mk = "台股" if e["m"] == "tw" else "美股"
-        lines.append(f"{'【大盤】' if e['kind'] == 'bench' else ''}{mk} {e['c']} {e['n']}："
-                     f"{LIGHT_ZH.get(e['from'], e['from'])} → {LIGHT_ZH.get(e['to'], e['to'])}")
-    try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      json={"chat_id": chat, "text": "\n".join(lines)}, timeout=20)
-        log("已發送 Telegram 通知")
-    except Exception as e:  # noqa
-        log("Telegram 通知失敗：", e)
+    # 手機通知改由 scripts/notify.py 發 App 推播（2026-11-06 使用者決定取消 Telegram）
 
 
 def finish(market, out, series):
