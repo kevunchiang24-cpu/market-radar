@@ -10,6 +10,10 @@
  ],
  "gap_hy": false,
  "sent": [
+  "2026-11-23|us|UBER|cheap",
+  "2026-11-23|us|WDAY|cheap",
+  "2026-11-23|us|BWXT|cheap",
+  "2026-11-23|us|TDG|cheap",
   "2026-11-20|us|NVDA|cheap",
   "2026-11-20|us|GS|cheap",
   "2026-11-20|us|TWLO|cheap",
@@ -205,10 +209,6 @@
   "2026-11-04|us|LEA|cheap",
   "2026-11-04|tw|6525|cheap",
   "2026-11-04|tw|7822|cheap",
-  "2026-11-04|tw|6016|cheap",
-  "2026-11-04|tw|6138|cheap",
-  "2026-11-04|tw|3141|cheap",
-  "2026-11-04|tw|8210|cheap",
-  "2026-11-04|tw|5536|cheap"
+  "2026-11-04|tw|6016|cheap"
  ]
 }
