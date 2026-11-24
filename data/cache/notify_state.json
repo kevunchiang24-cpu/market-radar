@@ -6,7 +6,6 @@
  "macro_on": false,
  "stage": "擴張後期",
  "below": [
-  "台股",
   "美股"
  ],
  "gap_hy": false,
