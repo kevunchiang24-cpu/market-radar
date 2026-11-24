@@ -6,10 +6,21 @@
  "macro_on": false,
  "stage": "擴張後期",
  "below": [
+  "台股",
   "美股"
  ],
  "gap_hy": false,
  "sent": [
+  "2026-11-24|tw|3714|cheap",
+  "2026-11-24|tw|6202|cheap",
+  "2026-11-24|tw|4583|cheap",
+  "2026-11-24|tw|5469|cheap",
+  "2026-11-24|tw|7767|cheap",
+  "2026-11-24|tw|4961|cheap",
+  "2026-11-24|tw|2915|cheap",
+  "2026-11-24|tw|2723|cheap",
+  "2026-11-24|tw|3005|cheap",
+  "2026-11-24|tw|3006|cheap",
   "2026-11-23|us|UBER|cheap",
   "2026-11-23|us|WDAY|cheap",
   "2026-11-23|us|BWXT|cheap",
@@ -199,16 +210,6 @@
   "2026-11-05|tw|3317|cheap",
   "2026-11-04|us|EXE|cheap",
   "2026-11-04|us|SNDK|cheap",
-  "2026-11-04|us|ENS|cheap",
-  "2026-11-04|us|BBWI|cheap",
-  "2026-11-04|us|DAR|cheap",
-  "2026-11-04|us|GDDY|cheap",
-  "2026-11-04|us|MLI|cheap",
-  "2026-11-04|us|CTSH|cheap",
-  "2026-11-04|us|LDOS|cheap",
-  "2026-11-04|us|LEA|cheap",
-  "2026-11-04|tw|6525|cheap",
-  "2026-11-04|tw|7822|cheap",
-  "2026-11-04|tw|6016|cheap"
+  "2026-11-04|us|ENS|cheap"
  ]
 }
