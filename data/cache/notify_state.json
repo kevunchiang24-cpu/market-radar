@@ -6,10 +6,14 @@
  "macro_on": false,
  "stage": "擴張後期",
  "below": [
+  "台股",
   "美股"
  ],
  "gap_hy": false,
  "sent": [
+  "2026-11-25|us|AMAT|cheap",
+  "2026-11-25|us|WING|cheap",
+  "2026-11-25|us|OLLI|cheap",
   "2026-11-25|tw|7722|cheap",
   "2026-11-25|tw|6890|cheap",
   "2026-11-25|tw|4755|cheap",
@@ -206,9 +210,6 @@
   "2026-11-05|us|NXT|cheap",
   "2026-11-05|us|IR|cheap",
   "2026-11-05|us|VMI|cheap",
-  "2026-11-05|us|BKR|cheap",
-  "2026-11-06|tw|4912|cheap",
-  "2026-11-06|tw|6909|cheap",
-  "2026-11-06|tw|5243|cheap"
+  "2026-11-05|us|BKR|cheap"
  ]
 }
